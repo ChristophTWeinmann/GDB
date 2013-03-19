@@ -1,0 +1,41 @@
+PROGRAM vla
+    REAL, TARGET, ALLOCATABLE :: vla1 (:, :, :)
+    REAL, TARGET, ALLOCATABLE :: vla2 (:, :, :)
+    REAL, TARGET, ALLOCATABLE :: vla3 (:, :)
+    REAL, POINTER :: pvla (:, :, :)
+    LOGICAL :: l
+
+    ALLOCATE (vla1 (10,10,10))          ! vla1-init
+    l = allocated(vla1)
+
+    ALLOCATE (vla2 (1:7,42:50,13:35))   ! vla1-allocated
+    l = allocated(vla2)
+
+    vla1(:, :, :) = 1311                ! vla2-allocated
+    vla1(3, 6, 9) = 42
+    vla1(1, 3, 8) = 1001
+    vla1(6, 2, 7) = 13
+
+    vla2(:, :, :) = 1311                ! vla1-filled
+    vla2(5, 45, 20) = 42
+
+    pvla => vla1                        ! vla2-filled
+    l = associated(pvla)
+
+    pvla => vla2                        ! pvla-associated
+    l = associated(pvla)
+    pvla(5, 45, 20) = 1
+    pvla(7, 45, 14) = 2
+
+    pvla => null()                      ! pvla-re-associated
+    l = associated(pvla)
+
+    deallocate (vla1)                   ! pvla-deassociated
+    l = allocated(vla1)
+
+    deallocate (vla2)                   ! vla1-deallocated
+    l = allocated(vla2)
+
+    ALLOCATE (vla3 (2,2))               ! vla2-deallocated
+    vla3(:,:) = 13
+END PROGRAM vla
