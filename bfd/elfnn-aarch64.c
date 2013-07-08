@@ -3585,11 +3585,11 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
       *unresolved_reloc_p = FALSE;
       break;
 
-    case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
-    case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
     case BFD_RELOC_AARCH64_TLSDESC_ADD:
+    case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
+    case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
     case BFD_RELOC_AARCH64_TLSDESC_LDR:
       if (globals->root.sgot == NULL)
 	return bfd_reloc_notsupported;
@@ -4079,9 +4079,9 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
 	  break;
 
+	case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
 	case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
 	case BFD_RELOC_AARCH64_TLSDESC_LDNN_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
 	  if (! symbol_tlsdesc_got_offset_mark_p (input_bfd, h, r_symndx))
 	    {
 	      bfd_boolean need_relocs = FALSE;
@@ -4458,27 +4458,27 @@ elfNN_aarch64_gc_sweep_hook (bfd *abfd,
       r_type = ELFNN_R_TYPE (rel->r_info);
       switch (aarch64_tls_transition (abfd,info, r_type, h ,r_symndx))
 	{
-	case BFD_RELOC_AARCH64_LD64_GOT_LO12_NC:
-	case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
-	case BFD_RELOC_AARCH64_GOT_LD_PREL19:
 	case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
-	case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
+	case BFD_RELOC_AARCH64_GOT_LD_PREL19:
+	case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
+	case BFD_RELOC_AARCH64_LD64_GOT_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
+	case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
 	case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
 	case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-	case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
 	case BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
+	case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
 	case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
+	case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
 	case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
-	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
-	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
 	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0:
 	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
-	case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
-	case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
+	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
+	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
 	  if (h != NULL)
 	    {
 	      if (h->got.refcount > 0)
@@ -4647,6 +4647,70 @@ elfNN_aarch64_allocate_local_symbols (bfd *abfd, unsigned number)
   return TRUE;
 }
 
+/* Create the .got section to hold the global offset table.  */
+
+static bfd_boolean
+aarch64_elf_create_got_section (bfd *abfd, struct bfd_link_info *info)
+{
+  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  flagword flags;
+  asection *s;
+  struct elf_link_hash_entry *h;
+  struct elf_link_hash_table *htab = elf_hash_table (info);
+
+  /* This function may be called more than once.  */
+  s = bfd_get_linker_section (abfd, ".got");
+  if (s != NULL)
+    return TRUE;
+
+  flags = bed->dynamic_sec_flags;
+
+  s = bfd_make_section_anyway_with_flags (abfd,
+					  (bed->rela_plts_and_copies_p
+					   ? ".rela.got" : ".rel.got"),
+					  (bed->dynamic_sec_flags
+					   | SEC_READONLY));
+  if (s == NULL
+      || ! bfd_set_section_alignment (abfd, s, bed->s->log_file_align))
+    return FALSE;
+  htab->srelgot = s;
+
+  s = bfd_make_section_anyway_with_flags (abfd, ".got", flags);
+  if (s == NULL
+      || !bfd_set_section_alignment (abfd, s, bed->s->log_file_align))
+    return FALSE;
+  htab->sgot = s;
+  htab->sgot->size += GOT_ENTRY_SIZE;
+
+  if (bed->want_got_sym)
+    {
+      /* Define the symbol _GLOBAL_OFFSET_TABLE_ at the start of the .got
+	 (or .got.plt) section.  We don't do this in the linker script
+	 because we don't want to define the symbol if we are not creating
+	 a global offset table.  */
+      h = _bfd_elf_define_linkage_sym (abfd, info, s,
+				       "_GLOBAL_OFFSET_TABLE_");
+      elf_hash_table (info)->hgot = h;
+      if (h == NULL)
+	return FALSE;
+    }
+
+  if (bed->want_got_plt)
+    {
+      s = bfd_make_section_anyway_with_flags (abfd, ".got.plt", flags);
+      if (s == NULL
+	  || !bfd_set_section_alignment (abfd, s,
+					 bed->s->log_file_align))
+	return FALSE;
+      htab->sgotplt = s;
+    }
+
+  /* The first bit of the global offset table is the header.  */
+  s->size += bed->got_header_size;
+
+  return TRUE;
+}
+
 /* Look through the relocs for a section during the first phase.  */
 
 static bfd_boolean
@@ -4802,27 +4866,27 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	  /* RR: We probably want to keep a consistency check that
 	     there are no dangling GOT_PAGE relocs.  */
-	case BFD_RELOC_AARCH64_LD64_GOT_LO12_NC:
-	case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
-	case BFD_RELOC_AARCH64_GOT_LD_PREL19:
 	case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
-	case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
+	case BFD_RELOC_AARCH64_GOT_LD_PREL19:
+	case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
+	case BFD_RELOC_AARCH64_LD64_GOT_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
+	case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
 	case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
 	case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-	case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
 	case BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
+	case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
 	case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
+	case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
 	case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
-	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
-	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
 	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0:
 	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
-	case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
-	case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
-	case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
+	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
+	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
+	case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
 	  {
 	    unsigned got_type;
 	    unsigned old_got_type;
@@ -4880,14 +4944,10 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  }
 	      }
 
-	    if (htab->root.sgot == NULL)
-	      {
-		if (htab->root.dynobj == NULL)
-		  htab->root.dynobj = abfd;
-		if (!_bfd_elf_create_got_section (htab->root.dynobj, info))
-		  return FALSE;
-		htab->root.sgot->size += GOT_ENTRY_SIZE;
-	      }
+	    if (htab->root.dynobj == NULL)
+	      htab->root.dynobj = abfd;
+	    if (! aarch64_elf_create_got_section (htab->root.dynobj, info))
+	      return FALSE;
 	    break;
 	  }
 
@@ -5481,7 +5541,10 @@ elfNN_aarch64_create_dynamic_sections (bfd *dynobj,
 				       struct bfd_link_info *info)
 {
   struct elf_aarch64_link_hash_table *htab;
-  struct elf_link_hash_entry *h;
+
+  /* We need to create .got section.  */
+  if (!aarch64_elf_create_got_section (dynobj, info))
+    return FALSE;
 
   if (!_bfd_elf_create_dynamic_sections (dynobj, info))
     return FALSE;
@@ -5493,16 +5556,6 @@ elfNN_aarch64_create_dynamic_sections (bfd *dynobj,
 
   if (!htab->sdynbss || (!info->shared && !htab->srelbss))
     abort ();
-
-  /* Define the symbol _GLOBAL_OFFSET_TABLE_ at the start of the
-     dynobj's .got section.  We don't do this in the linker script
-     because we don't want to define the symbol if we are not creating
-     a global offset table.  */
-  h = _bfd_elf_define_linkage_sym (dynobj, info,
-				   htab->root.sgot, "_GLOBAL_OFFSET_TABLE_");
-  elf_hash_table (info)->hgot = h;
-  if (h == NULL)
-    return FALSE;
 
   return TRUE;
 }

@@ -1,6 +1,5 @@
-/* This testcase is part of GDB, the GNU debugger.
-
-   Copyright 2009-2013 Free Software Foundation, Inc.
+/*
+   Copyright 2013 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,19 +14,23 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-extern volatile int gnu_ifunc_initialized;
-extern int init_stub (int arg);
-extern int final (int arg);
-
-typedef int (*final_t) (int arg);
-
-asm (".type gnu_ifunc, %gnu_indirect_function");
-
-final_t
-gnu_ifunc (void)
+void
+stop_frame ()
 {
-  if (! gnu_ifunc_initialized)
-    return init_stub;
-  else
-    return final;
+  /* The debug information for this frame is modified in the accompanying
+     .S file, to mark a set of registers as being undefined.  */
+}
+
+void
+first_frame ()
+{
+  stop_frame ();
+}
+
+int
+main ()
+{
+  first_frame ();
+
+  return 0;
 }

@@ -1,3 +1,102 @@
+2013-07-04  Pedro Alves  <palves@redhat.com>
+
+	* findvar.c (value_of_register): Use allocate_optimized_out_value
+	if the register has been optimized out, instead of
+	set_value_optimized_out.
+	* frame-unwind.c (frame_unwind_got_optimized): Use
+	allocate_optimized_out_value.
+
+2013-07-04  Pedro Alves  <palves@redhat.com>
+
+	* value.c (value_bits_valid): If the value is not lval_computed,
+	or doesn't have a check_validity hook, assume the value is entirely
+	valid.
+
+2013-07-04  Andrew Burgess  <aburgess@broadcom.com>
+
+	* stack.c (read_frame_arg): No longer fetch lazy values.
+	* value.c (value_optimized_out): If the value is not already
+	marked optimized out, and is lazy then fetch it.
+	(value_primitive_field): Move optimized out check to later in the
+	function, after we have loaded any lazy values.
+	(value_fetch_lazy): Use optimized out flag directly rather than
+	calling optimized_out method.
+
+2013-07-04  Andrew Burgess  <aburgess@broadcom.com>
+
+	* valops.c: Don't include "user-regs.h".
+	(value_fetch_lazy): Moved to value.c.
+	* value.c: Include "user-regs.h".
+	(value_fetch_lazy): Moved from valops.c.
+
+2013-07-04  Yao Qi  <yao@codesourcery.com>
+
+	Revert:
+	2013-06-27  Yao Qi  <yao@codesourcery.com>
+
+	* common/create-version.sh: Update comments.  Handle the case
+	that TARGET_ALIAS is empty.
+
+2013-07-03  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (config.status): Depend on development.sh.
+	(aclocal_m4_deps): Add libmcheck.m4.
+	* acinclude.m4: Include libmcheck.m4.
+	* configure.ac: Source development.sh instead of setting
+	'development' here.  --enable-libmcheck/--disable-libmcheck code
+	factored out to GDB_AC_LIBMCHECK.  Run it.
+	* development.sh: New file.
+	* libmcheck.m4: New file.
+	* configure: Regenerate.
+
+2013-07-02  Tom Tromey  <tromey@redhat.com>
+
+	* contrib/ari/update-web-ari.sh: Update for version.in change.
+
+2013-07-02  Tom Tromey  <tromey@redhat.com>
+
+	* common/ptid.h: Comment fixes.
+
+2013-07-01  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2read.c (dwarf2_get_dwz_file): Return NULL if
+	.gnu_debugaltlink not found.  Use bfd_get_alt_debug_link_info.
+	(dwarf2_read_index, create_all_comp_units): Update.
+
+2013-07-01  Tom Tromey  <tromey@redhat.com>
+
+	* configure.ac (build_warnings): Add -Wold-style-definition.
+	* configure: Rebuild.
+	* machoread.c (_initialize_machoread): Use "(void)".
+	* macrocmd.c (macro_inform_no_debuginfo): Fix formatting;
+	use "(void)".
+
+2013-07-01  Tom Tromey  <tromey@redhat.com>
+
+	* configure.ac (build_warnings): Add -Wold-style-declaration.
+	* configure: Rebuild.
+	* dsrec.c (make_srec): Use "static const", not "const static".
+	* h8300-tdep.c (h8300_breakpoint_from_pc): Use "static const",
+	not "const static".
+	* mi/mi-parse.c (mi_no_values, mi_simple_values, mi_all_values):
+	Use "static const", not "const static".
+	* mn10300-tdep.c (mn10300_breakpoint_from_pc): Use "static const",
+	not "const static".
+	* moxie-tdep.c (moxie_breakpoint_from_pc): Use "static const",
+	not "const static".
+	* rs6000-tdep.c (rs6000_breakpoint_from_pc): Use "static const",
+	not "const static".
+	* v850-tdep.c (v850_breakpoint_from_pc): Use "static const",
+	not "const static".
+	(v850_dbtrap_breakpoint_from_pc): Likewise.
+	* xstormy16-tdep.c (xstormy16_breakpoint_from_pc): Use "static const",
+	not "const static".
+
+2013-07-01  Tom Tromey  <tromey@redhat.com>
+
+	* configure.ac (build_warnings): Add -Wmissing-parameter-type.
+	* configure: Rebuild.
+
 2013-07-01  Pedro Alves  <palves@redhat.com>
 
 	* defs.h: Include "pathmax.h".

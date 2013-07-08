@@ -1,3 +1,89 @@
+2013-07-05  Tristan Gingold  <gingold@adacore.com>
+
+	* coffcode.h (coff_write_object_contents): Use ".ovrflo" name for
+	overflow sections.
+
+2013-07-05  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	* elf32-s390.c: Add new relocation definitions R_390_PC12DBL,
+	R_390_PLT12DBL, R_390_PC24DBL, and R_390_PLT24DBL.
+	(elf_s390_reloc_type_lookup, elf_s390_check_relocs)
+	(elf_s390_gc_sweep_hook, elf_s390_relocate_section): Support new
+	relocations.
+	* elf64-s390.c: See elf32-s390.c
+	* bfd-in2.h: Add new relocs to enum bfd_reloc_code_real.
+	* libbfd.h: Add new reloc strings.
+
+2013-07-03  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* elfnn-aarch64.c (elfNN_aarch64_final_link_relocate): Reorder case
+	values.
+	(elfNN_aarch64_relocate_section): Likewise.
+	(elfNN_aarch64_gc_sweep_hook): Likewise.
+	(elfNN_aarch64_check_relocs): Likewise.
+
+2013-07-03  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (ppc64_elf_func_desc_adjust): Don't hide .TOC.
+	when relocatable.  Don't change root.type or type here.
+	(ppc64_elf_set_toc): Set type of .TOC. to STT_OBJECT.
+
+2013-07-03  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (struct ppc_stub_hash_entry): Delete "addend".
+	(ppc64_elf_size_stubs): Don't set "addend".
+	(ppc64_elf_relocate_section): Don't allow calls via
+	toc-adjusting stubs without a following nop even in an
+	executable, except for self-calls and both libc_start_main
+	and .libc_start_main.
+
+2013-07-03  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (ppc64_elf_func_desc_adjust): Hide ".TOC.".
+
+2013-07-02  Tristan Gingold  <gingold@adacore.com>
+
+	* coff-rs6000.c (xcoff_find_nearest_line_discriminator): Add missing
+	line.
+
+2013-07-02  Tristan Gingold  <gingold@adacore.com>
+
+	* vms-alpha.c (_bfd_generic_find_nearest_line_discriminator): Define.
+	(_bfd_vms_find_nearest_line_discriminator): New function.
+
+2013-07-02  Tristan Gingold  <gingold@adacore.com>
+
+	* coff-rs6000.c (xcoff_create_csect_from_smclas): Handle more smclas.
+
+2013-07-02  Tristan Gingold  <gingold@adacore.com>
+
+	* coff-rs6000.c (xcoff_find_nearest_line_discriminator): New function.
+	(rs6000coff_vec): Reference it.
+
+2013-07-02  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* elfnn-aarch64.c (aarch64_elf_create_got_section): New.
+	(elfNN_aarch64_check_relocs): Use aarch64_elf_create_got_section.
+	(elfNN_aarch64_create_dynamic_sections): Do not define
+	_GLOBAL_OFFSET_TABLE_; call aarch64_elf_create_got_section.
+
+2013-07-02  Marcus Shawcroft  <marcus.shawcroft@arm.com>
+
+	* ld-aarch64/emit-relocs-309-low.d: Adjust .text address.
+	* ld-aarch64/emit-relocs-309-up.d: Adjust .got address.
+	* ld-aarch64/emit-relocs-312.d: Adjust offsets into .got.
+	* ld-aarch64/tls-relax-all.d: Likewise.
+	* ld-aarch64/gc-got-relocs.d: Adjust expected .got content.
+	* ld-aarch64/gc-tls-relocs.d: Likewise.
+	* ld-aarch64/tls-relax-gd-ie.d: Likewise.
+	* ld-aarch64/tls-relax-gdesc-ie-2.d: Likewise.
+	* ld-aarch64/tls-relax-gdesc-ie.d: Likewise.
+
+2013-07-02  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (ppc64_elf_relocate_section): Set "relocation" for
+	.TOC. after relocatable check.
+
 2013-07-01  Alan Modra  <amodra@gmail.com>
 
 	* elf64-ppc.h (ppc64_elf_toc): Delete.

@@ -1,3 +1,26 @@
+2013-07-05  Will Newton  <will.newton@linaro.org>
+
+	* gdb.base/gnu-ifunc-lib.c: Use %function instead of @function
+	in asm syntax to allow building on ARM.
+
+2013-07-05  Yao Qi  <yao@codesourcery.com>
+
+	* boards/local-remote-host.exp: Remove obsolete comments.
+	* boards/native-extended-gdbserver.exp: Likewise.
+	* boards/native-gdbserver.exp: Likewise.
+	* boards/native-stdio-gdbserver.exp: Likewise.
+
+2013-07-04  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb.dwarf2/dw2-reg-undefined.exp: New file.
+	* gdb.dwarf2/dw2-reg-undefined.c: Likewise.
+	* gdb.dwarf2/dw2-reg-undefined.S: Likewise.
+
+2013-07-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/break-on-linker-gcd-function.exp: Replace
+	prepare_for_testing by build_executable_from_specs and clean_restart.
+
 2013-06-27  Tom Tromey  <tromey@redhat.com>
 
 	* gdb.base/testenv.exp, gdb.base/tui-layout.exp,

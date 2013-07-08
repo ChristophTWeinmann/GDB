@@ -42,6 +42,7 @@
 #include <ctype.h>
 #include "tracepoint.h"
 #include "cp-abi.h"
+#include "user-regs.h"
 
 /* Prototypes for exported functions.  */
 
@@ -1053,6 +1054,11 @@ value_contents_equal (struct value *val1, struct value *val2)
 int
 value_optimized_out (struct value *value)
 {
+  /* We can only know if a value is optimized out once we have tried to
+     fetch it.  */
+  if (!value->optimized_out && value->lazy)
+    value_fetch_lazy (value);
+
   return value->optimized_out;
 }
 
@@ -1080,7 +1086,7 @@ value_bits_valid (const struct value *value, int offset, int length)
     return 1;
   if (value->lval != lval_computed
       || !value->location.computed.funcs->check_validity)
-    return 0;
+    return 1;
   return value->location.computed.funcs->check_validity (value, offset,
 							 length);
 }
@@ -2627,9 +2633,7 @@ value_primitive_field (struct value *arg1, int offset,
      description correctly.  */
   check_typedef (type);
 
-  if (value_optimized_out (arg1))
-    v = allocate_optimized_out_value (type);
-  else if (TYPE_FIELD_BITSIZE (arg_type, fieldno))
+  if (TYPE_FIELD_BITSIZE (arg_type, fieldno))
     {
       /* Handle packed fields.
 
@@ -2643,19 +2647,24 @@ value_primitive_field (struct value *arg1, int offset,
       int bitpos = TYPE_FIELD_BITPOS (arg_type, fieldno);
       int container_bitsize = TYPE_LENGTH (type) * 8;
 
-      v = allocate_value_lazy (type);
-      v->bitsize = TYPE_FIELD_BITSIZE (arg_type, fieldno);
-      if ((bitpos % container_bitsize) + v->bitsize <= container_bitsize
-	  && TYPE_LENGTH (type) <= (int) sizeof (LONGEST))
-	v->bitpos = bitpos % container_bitsize;
+      if (arg1->optimized_out)
+	v = allocate_optimized_out_value (type);
       else
-	v->bitpos = bitpos % 8;
-      v->offset = (value_embedded_offset (arg1)
-		   + offset
-		   + (bitpos - v->bitpos) / 8);
-      set_value_parent (v, arg1);
-      if (!value_lazy (arg1))
-	value_fetch_lazy (v);
+	{
+	  v = allocate_value_lazy (type);
+	  v->bitsize = TYPE_FIELD_BITSIZE (arg_type, fieldno);
+	  if ((bitpos % container_bitsize) + v->bitsize <= container_bitsize
+	      && TYPE_LENGTH (type) <= (int) sizeof (LONGEST))
+	    v->bitpos = bitpos % container_bitsize;
+	  else
+	    v->bitpos = bitpos % 8;
+	  v->offset = (value_embedded_offset (arg1)
+		       + offset
+		       + (bitpos - v->bitpos) / 8);
+	  set_value_parent (v, arg1);
+	  if (!value_lazy (arg1))
+	    value_fetch_lazy (v);
+	}
     }
   else if (fieldno < TYPE_N_BASECLASSES (arg_type))
     {
@@ -2668,29 +2677,37 @@ value_primitive_field (struct value *arg1, int offset,
       if (VALUE_LVAL (arg1) == lval_register && value_lazy (arg1))
 	value_fetch_lazy (arg1);
 
-      /* We special case virtual inheritance here because this
-	 requires access to the contents, which we would rather avoid
-	 for references to ordinary fields of unavailable values.  */
-      if (BASETYPE_VIA_VIRTUAL (arg_type, fieldno))
-	boffset = baseclass_offset (arg_type, fieldno,
-				    value_contents (arg1),
-				    value_embedded_offset (arg1),
-				    value_address (arg1),
-				    arg1);
-      else
-	boffset = TYPE_FIELD_BITPOS (arg_type, fieldno) / 8;
-
-      if (value_lazy (arg1))
-	v = allocate_value_lazy (value_enclosing_type (arg1));
+      /* The optimized_out flag is only set correctly once a lazy value is
+         loaded, having just loaded some lazy values we should check the
+         optimized out case now.  */
+      if (arg1->optimized_out)
+	v = allocate_optimized_out_value (type);
       else
 	{
-	  v = allocate_value (value_enclosing_type (arg1));
-	  value_contents_copy_raw (v, 0, arg1, 0,
-				   TYPE_LENGTH (value_enclosing_type (arg1)));
+	  /* We special case virtual inheritance here because this
+	     requires access to the contents, which we would rather avoid
+	     for references to ordinary fields of unavailable values.  */
+	  if (BASETYPE_VIA_VIRTUAL (arg_type, fieldno))
+	    boffset = baseclass_offset (arg_type, fieldno,
+					value_contents (arg1),
+					value_embedded_offset (arg1),
+					value_address (arg1),
+					arg1);
+	  else
+	    boffset = TYPE_FIELD_BITPOS (arg_type, fieldno) / 8;
+
+	  if (value_lazy (arg1))
+	    v = allocate_value_lazy (value_enclosing_type (arg1));
+	  else
+	    {
+	      v = allocate_value (value_enclosing_type (arg1));
+	      value_contents_copy_raw (v, 0, arg1, 0,
+				       TYPE_LENGTH (value_enclosing_type (arg1)));
+	    }
+	  v->type = type;
+	  v->offset = value_offset (arg1);
+	  v->embedded_offset = offset + value_embedded_offset (arg1) + boffset;
 	}
-      v->type = type;
-      v->offset = value_offset (arg1);
-      v->embedded_offset = offset + value_embedded_offset (arg1) + boffset;
     }
   else
     {
@@ -2701,7 +2718,12 @@ value_primitive_field (struct value *arg1, int offset,
       if (VALUE_LVAL (arg1) == lval_register && value_lazy (arg1))
 	value_fetch_lazy (arg1);
 
-      if (value_lazy (arg1))
+      /* The optimized_out flag is only set correctly once a lazy value is
+         loaded, having just loaded some lazy values we should check for
+         the optimized out case now.  */
+      if (arg1->optimized_out)
+	v = allocate_optimized_out_value (type);
+      else if (value_lazy (arg1))
 	v = allocate_value_lazy (type);
       else
 	{
@@ -3371,6 +3393,170 @@ int
 value_initialized (struct value *val)
 {
   return val->initialized;
+}
+
+/* Called only from the value_contents and value_contents_all()
+   macros, if the current data for a variable needs to be loaded into
+   value_contents(VAL).  Fetches the data from the user's process, and
+   clears the lazy flag to indicate that the data in the buffer is
+   valid.
+
+   If the value is zero-length, we avoid calling read_memory, which
+   would abort.  We mark the value as fetched anyway -- all 0 bytes of
+   it.
+
+   This function returns a value because it is used in the
+   value_contents macro as part of an expression, where a void would
+   not work.  The value is ignored.  */
+
+int
+value_fetch_lazy (struct value *val)
+{
+  gdb_assert (value_lazy (val));
+  allocate_value_contents (val);
+  if (value_bitsize (val))
+    {
+      /* To read a lazy bitfield, read the entire enclosing value.  This
+	 prevents reading the same block of (possibly volatile) memory once
+         per bitfield.  It would be even better to read only the containing
+         word, but we have no way to record that just specific bits of a
+         value have been fetched.  */
+      struct type *type = check_typedef (value_type (val));
+      enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
+      struct value *parent = value_parent (val);
+      LONGEST offset = value_offset (val);
+      LONGEST num;
+
+      if (!value_bits_valid (val,
+			     TARGET_CHAR_BIT * offset + value_bitpos (val),
+			     value_bitsize (val)))
+	error (_("value has been optimized out"));
+
+      if (!unpack_value_bits_as_long (value_type (val),
+				      value_contents_for_printing (parent),
+				      offset,
+				      value_bitpos (val),
+				      value_bitsize (val), parent, &num))
+	mark_value_bytes_unavailable (val,
+				      value_embedded_offset (val),
+				      TYPE_LENGTH (type));
+      else
+	store_signed_integer (value_contents_raw (val), TYPE_LENGTH (type),
+			      byte_order, num);
+    }
+  else if (VALUE_LVAL (val) == lval_memory)
+    {
+      CORE_ADDR addr = value_address (val);
+      struct type *type = check_typedef (value_enclosing_type (val));
+
+      if (TYPE_LENGTH (type))
+	read_value_memory (val, 0, value_stack (val),
+			   addr, value_contents_all_raw (val),
+			   TYPE_LENGTH (type));
+    }
+  else if (VALUE_LVAL (val) == lval_register)
+    {
+      struct frame_info *frame;
+      int regnum;
+      struct type *type = check_typedef (value_type (val));
+      struct value *new_val = val, *mark = value_mark ();
+
+      /* Offsets are not supported here; lazy register values must
+	 refer to the entire register.  */
+      gdb_assert (value_offset (val) == 0);
+
+      while (VALUE_LVAL (new_val) == lval_register && value_lazy (new_val))
+	{
+	  frame = frame_find_by_id (VALUE_FRAME_ID (new_val));
+	  regnum = VALUE_REGNUM (new_val);
+
+	  gdb_assert (frame != NULL);
+
+	  /* Convertible register routines are used for multi-register
+	     values and for interpretation in different types
+	     (e.g. float or int from a double register).  Lazy
+	     register values should have the register's natural type,
+	     so they do not apply.  */
+	  gdb_assert (!gdbarch_convert_register_p (get_frame_arch (frame),
+						   regnum, type));
+
+	  new_val = get_frame_register_value (frame, regnum);
+	}
+
+      /* If it's still lazy (for instance, a saved register on the
+	 stack), fetch it.  */
+      if (value_lazy (new_val))
+	value_fetch_lazy (new_val);
+
+      /* If the register was not saved, mark it optimized out.  */
+      if (value_optimized_out (new_val))
+	set_value_optimized_out (val, 1);
+      else
+	{
+	  set_value_lazy (val, 0);
+	  value_contents_copy (val, value_embedded_offset (val),
+			       new_val, value_embedded_offset (new_val),
+			       TYPE_LENGTH (type));
+	}
+
+      if (frame_debug)
+	{
+	  struct gdbarch *gdbarch;
+	  frame = frame_find_by_id (VALUE_FRAME_ID (val));
+	  regnum = VALUE_REGNUM (val);
+	  gdbarch = get_frame_arch (frame);
+
+	  fprintf_unfiltered (gdb_stdlog,
+			      "{ value_fetch_lazy "
+			      "(frame=%d,regnum=%d(%s),...) ",
+			      frame_relative_level (frame), regnum,
+			      user_reg_map_regnum_to_name (gdbarch, regnum));
+
+	  fprintf_unfiltered (gdb_stdlog, "->");
+	  if (value_optimized_out (new_val))
+	    fprintf_unfiltered (gdb_stdlog, " optimized out");
+	  else
+	    {
+	      int i;
+	      const gdb_byte *buf = value_contents (new_val);
+
+	      if (VALUE_LVAL (new_val) == lval_register)
+		fprintf_unfiltered (gdb_stdlog, " register=%d",
+				    VALUE_REGNUM (new_val));
+	      else if (VALUE_LVAL (new_val) == lval_memory)
+		fprintf_unfiltered (gdb_stdlog, " address=%s",
+				    paddress (gdbarch,
+					      value_address (new_val)));
+	      else
+		fprintf_unfiltered (gdb_stdlog, " computed");
+
+	      fprintf_unfiltered (gdb_stdlog, " bytes=");
+	      fprintf_unfiltered (gdb_stdlog, "[");
+	      for (i = 0; i < register_size (gdbarch, regnum); i++)
+		fprintf_unfiltered (gdb_stdlog, "%02x", buf[i]);
+	      fprintf_unfiltered (gdb_stdlog, "]");
+	    }
+
+	  fprintf_unfiltered (gdb_stdlog, " }\n");
+	}
+
+      /* Dispose of the intermediate values.  This prevents
+	 watchpoints from trying to watch the saved frame pointer.  */
+      value_free_to_mark (mark);
+    }
+  else if (VALUE_LVAL (val) == lval_computed
+	   && value_computed_funcs (val)->read != NULL)
+    value_computed_funcs (val)->read (val);
+  /* Don't call value_optimized_out on val, doing so would result in a
+     recursive call back to value_fetch_lazy, instead check the
+     optimized_out flag directly.  */
+  else if (val->optimized_out)
+    /* Keep it optimized out.  */;
+  else
+    internal_error (__FILE__, __LINE__, _("Unexpected lazy value type."));
+
+  set_value_lazy (val, 0);
+  return 0;
 }
 
 void

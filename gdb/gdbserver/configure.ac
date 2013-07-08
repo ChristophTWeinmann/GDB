@@ -41,6 +41,21 @@ AC_HEADER_DIRENT
 
 AC_FUNC_ALLOCA
 
+# Set the 'development' global.
+. $srcdir/../development.sh
+
+# Enable -lmcheck by default (it provides cheap-enough memory
+# mangling), but turn it off for releases.
+if $development; then
+  libmcheck_default=yes
+else
+  libmcheck_default=no
+fi
+GDB_AC_LIBMCHECK(${libmcheck_default})
+
+ACX_NONCANONICAL_TARGET
+ACX_NONCANONICAL_HOST
+
 # Dependency checking.
 ZW_CREATE_DEPDIR
 ZW_PROG_COMPILER_DEPENDENCIES([CC])
@@ -470,14 +485,6 @@ if test x"$STDINT_H" != x; then
   GNULIB_STDINT_H=$GNULIB/$STDINT_H
 fi
 AC_SUBST(GNULIB_STDINT_H)
-
-# For --version, we want to the print --host/--target exactly
-# as passed to configure.  But if those were not specified, then
-# print the canonical host/target.
-version_host=${host_alias:-$host}
-version_target=${target_alias:-$target}
-AC_SUBST(version_host)
-AC_SUBST(version_target)
 
 AC_OUTPUT(Makefile,
 [case x$CONFIG_HEADERS in
