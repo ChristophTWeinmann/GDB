@@ -201,6 +201,19 @@ enum type_instance_flag_value
   TYPE_INSTANCE_FLAG_RESTRICT = (1 << 7)
 };
 
+/* Allocated status of type object.  If set to non-zero it means the object
+   is allocated. A zero value means it is not allocated.  */
+#define TYPE_ALLOCATED(t)       (TYPE_MAIN_TYPE (t)->flag_allocated)
+
+/* Associated status of type object.  If set to non-zero it means the object
+   is associated. A zero value means it is not associated.  */
+#define TYPE_ASSOCIATED(t)      (TYPE_MAIN_TYPE (t)->flag_associated)
+
+/* Determines whetter the data_location is an address or whetter it needs to be
+   calculated out of the Dwarf block.  */
+#define TYPE_DATA_LOCATION_IS_ADDRESS(t) \
+  (TYPE_MAIN_TYPE (t)->flag_data_location_is_address)
+
 /* Unsigned integer type.  If this is not set for a TYPE_CODE_INT, the
    type is signed (unless TYPE_FLAG_NOSIGN (below) is set).  */
 
@@ -409,6 +422,9 @@ struct main_type
      because they packs nicely here.  See the TYPE_* macros for
      documentation about these fields.  */
 
+  unsigned int flag_allocated : 1;
+  unsigned int flag_associated : 1;
+  unsigned int flag_data_location_is_address : 1;
   unsigned int flag_unsigned : 1;
   unsigned int flag_nosign : 1;
   unsigned int flag_stub : 1;
@@ -644,6 +660,26 @@ struct main_type
     /* For TYPE_CODE_FUNC types,  */
     struct func_type *func_stuff;
   } type_specific;
+
+  union data_location {
+    /* Baton for DW_AT_data_location.
+       Evaluation of this description (DW_AT_push_object_address) yields to the
+       location of the data for this object.  */
+    struct dwarf2_locexpr_baton *baton;
+    /* Address of actual data if static and not read from Dwarf.  */
+    CORE_ADDR address;
+  } data_location;
+
+  /* Baton for DW_AT_allocated.
+     The presence of this attribute indicates that the object of the type
+     can be allocated/deallocated.  Can be evaluated using
+     DW_AT_push_object_address.  */
+  struct dwarf2_locexpr_baton *allocated_baton;
+
+  /* Baton for DW_AT_associated.
+     The presence of this attribute indicated that the object of the type
+     can be associated.  Can be evaluated using DW_AT_push_object_address.  */
+  struct dwarf2_locexpr_baton *associated_baton;
 };
 
 /* A ``struct type'' describes a particular instance of a type, with
@@ -1072,6 +1108,12 @@ extern void allocate_gnat_aux_type (struct type *);
    TYPE_RANGE_DATA(range_type)->low_undefined
 #define TYPE_HIGH_BOUND_UNDEFINED(range_type) \
    TYPE_RANGE_DATA(range_type)->high_undefined
+
+/* Attribute accessors for VLA support.  */
+#define TYPE_DATA_LOCATION_BATON(thistype) TYPE_MAIN_TYPE(thistype)->data_location.baton
+#define TYPE_DATA_LOCATION_ADDR(thistype) TYPE_MAIN_TYPE(thistype)->data_location.address
+#define TYPE_ALLOCATED_BATON(thistype) TYPE_MAIN_TYPE(thistype)->allocated_baton
+#define TYPE_ASSOCIATED_BATON(thistype) TYPE_MAIN_TYPE(thistype)->associated_baton
 
 /* Moto-specific stuff for FORTRAN arrays.  */
 

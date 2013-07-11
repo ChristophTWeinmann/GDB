@@ -1777,6 +1777,9 @@ static void process_cu_includes (void);
 
 static void check_producer (struct dwarf2_cu *cu);
 
+static struct dwarf2_locexpr_baton* attr_to_locexprbaton
+  (struct attribute *, struct dwarf2_cu *);
+
 #if WORDS_BIGENDIAN
 
 /* Convert VALUE between big- and little-endian.  */
@@ -12362,6 +12365,27 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
 		     "than the total size of elements"));
     }
 
+  /* Read DW_AT_allocated and set in type.  */
+  attr = dwarf2_attr (die, DW_AT_allocated, cu);
+  if (attr_form_is_block (attr)) {
+      TYPE_ALLOCATED_BATON (type) = attr_to_locexprbaton (attr, cu);
+      gdb_assert (TYPE_ALLOCATED_BATON (type) != NULL);
+  }
+
+  /* Read DW_AT_associated and set in type.  */
+  attr = dwarf2_attr (die, DW_AT_associated, cu);
+  if (attr_form_is_block (attr)) {
+      TYPE_ASSOCIATED_BATON (type) = attr_to_locexprbaton (attr, cu);
+      gdb_assert (TYPE_ASSOCIATED_BATON (type) != NULL);
+  }
+
+  /* Read DW_AT_data_location and set in type.  */
+  attr = dwarf2_attr (die, DW_AT_data_location, cu);
+  if (attr_form_is_block (attr)) {
+      TYPE_DATA_LOCATION_BATON (type) = attr_to_locexprbaton (attr, cu);
+      gdb_assert (TYPE_DATA_LOCATION_BATON (type) != NULL);
+  }
+
   name = dwarf2_name (die, cu);
   if (name)
     TYPE_NAME (type) = name;
@@ -21588,4 +21612,28 @@ Usage: save gdb-index DIRECTORY"),
 					&dwarf2_block_frame_base_locexpr_funcs);
   dwarf2_loclist_block_index = register_symbol_block_impl (LOC_BLOCK,
 					&dwarf2_block_frame_base_loclist_funcs);
+}
+
+/* Turn Dwarf block into location expression baton structure.  Used to store
+   baton into "dynamic" types, e.g. VLA's.  */
+
+static struct dwarf2_locexpr_baton*
+attr_to_locexprbaton (struct attribute *attribute, struct dwarf2_cu *comp_unit)
+{
+  struct objfile *objfile = dwarf2_per_objfile->objfile;
+  struct dwarf2_locexpr_baton *baton;
+
+  gdb_assert (attribute != NULL && comp_unit != NULL &&
+          attr_form_is_block (attribute));
+
+  baton = obstack_alloc (&objfile->objfile_obstack,
+    sizeof (struct dwarf2_locexpr_baton));
+  baton->per_cu = comp_unit->per_cu;
+  baton->size = DW_BLOCK (attribute)->size;
+  /* Copy the data pointer as the blocks lifetime is
+     bound to its object file.  */
+  baton->data = DW_BLOCK (attribute)->data;
+  gdb_assert(baton->data != NULL);
+
+  return baton;
 }
