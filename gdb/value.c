@@ -1062,6 +1062,12 @@ value_optimized_out (struct value *value)
   return value->optimized_out;
 }
 
+int
+value_optimized_out_const (const struct value *value)
+{
+  return value->optimized_out;
+}
+
 void
 set_value_optimized_out (struct value *value, int val)
 {
@@ -1086,7 +1092,7 @@ value_bits_valid (const struct value *value, int offset, int length)
     return 1;
   if (value->lval != lval_computed
       || !value->location.computed.funcs->check_validity)
-    return 1;
+    return 0;
   return value->location.computed.funcs->check_validity (value, offset,
 							 length);
 }

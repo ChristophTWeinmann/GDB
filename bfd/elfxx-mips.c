@@ -14316,7 +14316,7 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 
   abi_fp_bfd = mips_elf_tdata (obfd)->abi_fp_bfd;
   in_attr = elf_known_obj_attributes (ibfd)[OBJ_ATTR_GNU];
-  if (!abi_fp_bfd && in_attr[Tag_GNU_MIPS_ABI_FP].i != 0)
+  if (!abi_fp_bfd && in_attr[Tag_GNU_MIPS_ABI_FP].i != Val_GNU_MIPS_ABI_FP_ANY)
     mips_elf_tdata (obfd)->abi_fp_bfd = ibfd;
 
   if (!elf_known_obj_attributes_proc (obfd)[0].i)
@@ -14337,27 +14337,27 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
   if (in_attr[Tag_GNU_MIPS_ABI_FP].i != out_attr[Tag_GNU_MIPS_ABI_FP].i)
     {
       out_attr[Tag_GNU_MIPS_ABI_FP].type = 1;
-      if (out_attr[Tag_GNU_MIPS_ABI_FP].i == 0)
+      if (out_attr[Tag_GNU_MIPS_ABI_FP].i == Val_GNU_MIPS_ABI_FP_ANY)
 	out_attr[Tag_GNU_MIPS_ABI_FP].i = in_attr[Tag_GNU_MIPS_ABI_FP].i;
-      else if (in_attr[Tag_GNU_MIPS_ABI_FP].i != 0)
+      else if (in_attr[Tag_GNU_MIPS_ABI_FP].i != Val_GNU_MIPS_ABI_FP_ANY)
 	switch (out_attr[Tag_GNU_MIPS_ABI_FP].i)
 	  {
-	  case 1:
+	  case Val_GNU_MIPS_ABI_FP_DOUBLE:
 	    switch (in_attr[Tag_GNU_MIPS_ABI_FP].i)
 	      {
-	      case 2:
+	      case Val_GNU_MIPS_ABI_FP_SINGLE:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd, "-mdouble-float", "-msingle-float");
 		break;
 
-	      case 3:
+	      case Val_GNU_MIPS_ABI_FP_SOFT:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd, "-mhard-float", "-msoft-float");
 		break;
 
-	      case 4:
+	      case Val_GNU_MIPS_ABI_FP_64:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd,
@@ -14374,22 +14374,22 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 	      }
 	    break;
 
-	  case 2:
+	  case Val_GNU_MIPS_ABI_FP_SINGLE:
 	    switch (in_attr[Tag_GNU_MIPS_ABI_FP].i)
 	      {
-	      case 1:
+	      case Val_GNU_MIPS_ABI_FP_DOUBLE:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd, "-msingle-float", "-mdouble-float");
 		break;
 
-	      case 3:
+	      case Val_GNU_MIPS_ABI_FP_SOFT:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd, "-mhard-float", "-msoft-float");
 		break;
 
-	      case 4:
+	      case Val_GNU_MIPS_ABI_FP_64:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd,
@@ -14406,12 +14406,12 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 	      }
 	    break;
 
-	  case 3:
+	  case Val_GNU_MIPS_ABI_FP_SOFT:
 	    switch (in_attr[Tag_GNU_MIPS_ABI_FP].i)
 	      {
-	      case 1:
-	      case 2:
-	      case 4:
+	      case Val_GNU_MIPS_ABI_FP_DOUBLE:
+	      case Val_GNU_MIPS_ABI_FP_SINGLE:
+	      case Val_GNU_MIPS_ABI_FP_64:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd, "-msoft-float", "-mhard-float");
@@ -14427,24 +14427,24 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 	      }
 	    break;
 
-	  case 4:
+	  case Val_GNU_MIPS_ABI_FP_64:
 	    switch (in_attr[Tag_GNU_MIPS_ABI_FP].i)
 	      {
-	      case 1:
+	      case Val_GNU_MIPS_ABI_FP_DOUBLE:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd,
 		   "-mips32r2 -mfp64", "-mdouble-float");
 		break;
 
-	      case 2:
+	      case Val_GNU_MIPS_ABI_FP_SINGLE:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd,
 		   "-mips32r2 -mfp64", "-msingle-float");
 		break;
 
-	      case 3:
+	      case Val_GNU_MIPS_ABI_FP_SOFT:
 		_bfd_error_handler
 		  (_("Warning: %B uses %s (set by %B), %B uses %s"),
 		   obfd, abi_fp_bfd, ibfd, "-mhard-float", "-msoft-float");
@@ -14463,7 +14463,7 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 	  default:
 	    switch (in_attr[Tag_GNU_MIPS_ABI_FP].i)
 	      {
-	      case 1:
+	      case Val_GNU_MIPS_ABI_FP_DOUBLE:
 		_bfd_error_handler
 		  (_("Warning: %B uses unknown floating point ABI %d "
 		     "(set by %B), %B uses %s"),
@@ -14471,7 +14471,7 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 		   out_attr[Tag_GNU_MIPS_ABI_FP].i, "-mdouble-float");
 		break;
 
-	      case 2:
+	      case Val_GNU_MIPS_ABI_FP_SINGLE:
 		_bfd_error_handler
 		  (_("Warning: %B uses unknown floating point ABI %d "
 		     "(set by %B), %B uses %s"),
@@ -14479,7 +14479,7 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 		   out_attr[Tag_GNU_MIPS_ABI_FP].i, "-msingle-float");
 		break;
 
-	      case 3:
+	      case Val_GNU_MIPS_ABI_FP_SOFT:
 		_bfd_error_handler
 		  (_("Warning: %B uses unknown floating point ABI %d "
 		     "(set by %B), %B uses %s"),
@@ -14487,7 +14487,7 @@ mips_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 		   out_attr[Tag_GNU_MIPS_ABI_FP].i, "-msoft-float");
 		break;
 
-	      case 4:
+	      case Val_GNU_MIPS_ABI_FP_64:
 		_bfd_error_handler
 		  (_("Warning: %B uses unknown floating point ABI %d "
 		     "(set by %B), %B uses %s"),
@@ -14730,6 +14730,20 @@ _bfd_mips_elf_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
       old_flags &= ~ EF_MIPS_ARCH_ASE;
     }
 
+  /* Compare NaN encodings.  */
+  if ((new_flags & EF_MIPS_NAN2008) != (old_flags & EF_MIPS_NAN2008))
+    {
+      _bfd_error_handler (_("%B: linking %s module with previous %s modules"),
+			  ibfd,
+			  (new_flags & EF_MIPS_NAN2008
+			   ? "-mnan=2008" : "-mnan=legacy"),
+			  (old_flags & EF_MIPS_NAN2008
+			   ? "-mnan=2008" : "-mnan=legacy"));
+      ok = FALSE;
+      new_flags &= ~EF_MIPS_NAN2008;
+      old_flags &= ~EF_MIPS_NAN2008;
+    }
+
   /* Warn about any other mismatches */
   if (new_flags != old_flags)
     {
@@ -14920,6 +14934,9 @@ _bfd_mips_elf_print_private_bfd_data (bfd *abfd, void *ptr)
 
   if (elf_elfheader (abfd)->e_flags & EF_MIPS_ARCH_ASE_MICROMIPS)
     fprintf (file, " [micromips]");
+
+  if (elf_elfheader (abfd)->e_flags & EF_MIPS_NAN2008)
+    fprintf (file, " [nan2008]");
 
   if (elf_elfheader (abfd)->e_flags & EF_MIPS_32BITMODE)
     fprintf (file, " [32bitmode]");

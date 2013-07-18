@@ -138,7 +138,7 @@ nto_find_and_open_solib (char *solib, unsigned o_flags, char **temp_pathname)
 	  if (ret >= 0)
 	    *temp_pathname = gdb_realpath (arch_path);
 	  else
-	    **temp_pathname = '\0';
+	    *temp_pathname = NULL;
 	}
     }
   return ret;
@@ -306,7 +306,7 @@ nto_relocate_section_addresses (struct so_list *so, struct target_section *sec)
   /* Neutrino treats the l_addr base address field in link.h as different than
      the base address in the System V ABI and so the offset needs to be
      calculated and applied to relocations.  */
-  Elf_Internal_Phdr *phdr = find_load_phdr (sec->bfd);
+  Elf_Internal_Phdr *phdr = find_load_phdr (sec->the_bfd_section->owner);
   unsigned vaddr = phdr ? phdr->p_vaddr : 0;
 
   sec->addr = nto_truncate_ptr (sec->addr + lm_addr (so) - vaddr);

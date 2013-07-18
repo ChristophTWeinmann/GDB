@@ -1506,7 +1506,7 @@ print_return_value (struct value *function, struct type *value_type)
       ui_out_field_fmt (uiout, "gdb-result-var", "$%d",
 			record_latest_value (value));
       ui_out_text (uiout, " = ");
-      get_raw_print_options (&opts);
+      get_no_prettyformat_print_options (&opts);
       value_print (value, stb, &opts);
       ui_out_field_stream (uiout, "return-value", stb);
       ui_out_text (uiout, "\n");
@@ -2052,17 +2052,8 @@ default_print_one_register_info (struct ui_file *file,
 		 value_embedded_offset (val), 0,
 		 file, 0, val, &opts, current_language);
 
-      fprintf_filtered (file, "\t(raw 0x");
-      for (j = 0; j < TYPE_LENGTH (regtype); j++)
-	{
-	  int idx;
-
-	  if (byte_order == BFD_ENDIAN_BIG)
-	    idx = j;
-	  else
-	    idx = TYPE_LENGTH (regtype) - 1 - j;
-	  fprintf_filtered (file, "%02x", (unsigned char) valaddr[idx]);
-	}
+      fprintf_filtered (file, "\t(raw ");
+      print_hex_chars (file, valaddr, TYPE_LENGTH (regtype), byte_order);
       fprintf_filtered (file, ")");
     }
   else

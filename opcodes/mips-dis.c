@@ -51,100 +51,6 @@ struct mips_cp0sel_name
   const char * const name;
 };
 
-/* The mips16 registers.  */
-static const unsigned int mips16_to_32_reg_map[] =
-{
-  16, 17, 2, 3, 4, 5, 6, 7
-};
-
-/* The microMIPS registers with type b.  */
-#define micromips_to_32_reg_b_map	mips16_to_32_reg_map
-
-/* The microMIPS registers with type c.  */
-#define micromips_to_32_reg_c_map	mips16_to_32_reg_map
-
-/* The microMIPS registers with type d.  */
-#define micromips_to_32_reg_d_map	mips16_to_32_reg_map
-
-/* The microMIPS registers with type e.  */
-#define micromips_to_32_reg_e_map	mips16_to_32_reg_map
-
-/* The microMIPS registers with type f.  */
-#define micromips_to_32_reg_f_map	mips16_to_32_reg_map
-
-/* The microMIPS registers with type g.  */
-#define micromips_to_32_reg_g_map	mips16_to_32_reg_map
-
-/* The microMIPS registers with type h.  */
-static const unsigned int micromips_to_32_reg_h_map[] =
-{
-  5, 5, 6, 4, 4, 4, 4, 4
-};
-
-/* The microMIPS registers with type i.  */
-static const unsigned int micromips_to_32_reg_i_map[] =
-{
-  6, 7, 7, 21, 22, 5, 6, 7
-};
-
-/* The microMIPS registers with type j: 32 registers.  */
-
-/* The microMIPS registers with type l.  */
-#define micromips_to_32_reg_l_map	mips16_to_32_reg_map
-
-/* The microMIPS registers with type m.  */
-static const unsigned int micromips_to_32_reg_m_map[] =
-{
-  0, 17, 2, 3, 16, 18, 19, 20
-};
-
-/* The microMIPS registers with type n.  */
-#define micromips_to_32_reg_n_map      micromips_to_32_reg_m_map
-
-/* The microMIPS registers with type p: 32 registers.  */
-
-/* The microMIPS registers with type q.  */
-static const unsigned int micromips_to_32_reg_q_map[] =
-{
-  0, 17, 2, 3, 4, 5, 6, 7
-};
-
-/* reg type s is $29.  */
-
-/* reg type t is the same as the last register.  */
-
-/* reg type y is $31.  */
-
-/* reg type z is $0.  */
-
-/* micromips imm B type.  */
-static const int micromips_imm_b_map[8] =
-{
-  1, 4, 8, 12, 16, 20, 24, -1
-};
-
-/* micromips imm C type.  */
-static const int micromips_imm_c_map[16] =
-{
-  128, 1, 2, 3, 4, 7, 8, 15, 16, 31, 32, 63, 64, 255, 32768, 65535
-};
-
-/* micromips imm D type: (-512..511)<<1.  */
-/* micromips imm E type: (-64..63)<<1.  */
-/* micromips imm F type: (0..63).  */
-/* micromips imm G type: (-1..14).  */
-/* micromips imm H type: (0..15)<<1.  */
-/* micromips imm I type: (-1..126).  */
-/* micromips imm J type: (0..15)<<2.  */
-/* micromips imm L type: (0..15).  */
-/* micromips imm M type: (1..8).  */
-/* micromips imm W type: (0..63)<<2.  */
-/* micromips imm X type: (-8..7).  */
-/* micromips imm Y type: (-258..-3, 2..257)<<2.  */
-
-#define mips16_reg_names(rn)	mips_gpr_names[mips16_to_32_reg_map[rn]]
-
-
 static const char * const mips_gpr_names_numeric[32] =
 {
   "$0",   "$1",   "$2",   "$3",   "$4",   "$5",   "$6",   "$7",
@@ -966,501 +872,409 @@ lookup_mips_cp0sel_name (const struct mips_cp0sel_name *names,
       return &names[i];
   return NULL;
 }
-
-/* Print insn arguments for 32/64-bit code.  */
+
+/* Print register REGNO, of type TYPE, for instruction OPCODE.  */
 
 static void
-print_insn_args (const char *d,
-		 int l,
-		 bfd_vma pc,
-		 struct disassemble_info *info,
-		 const struct mips_opcode *opp)
+print_reg (struct disassemble_info *info, const struct mips_opcode *opcode,
+	   enum mips_reg_operand_type type, int regno)
+{
+  switch (type)
+    {
+    case OP_REG_GP:
+      info->fprintf_func (info->stream, "%s", mips_gpr_names[regno]);
+      break;
+
+    case OP_REG_FP:
+      info->fprintf_func (info->stream, "%s", mips_fpr_names[regno]);
+      break;
+
+    case OP_REG_CCC:
+      if (opcode->pinfo & (FP_D | FP_S))
+	info->fprintf_func (info->stream, "$fcc%d", regno);
+      else
+	info->fprintf_func (info->stream, "$cc%d", regno);
+      break;
+
+    case OP_REG_VEC:
+      if (opcode->membership & INSN_5400)
+	info->fprintf_func (info->stream, "$f%d", regno);
+      else
+	info->fprintf_func (info->stream, "$v%d", regno);
+      break;
+
+    case OP_REG_ACC:
+      info->fprintf_func (info->stream, "$ac%d", regno);
+      break;
+
+    case OP_REG_COPRO:
+      if (opcode->name[strlen (opcode->name) - 1] == '0')
+	info->fprintf_func (info->stream, "%s", mips_cp0_names[regno]);
+      else
+	info->fprintf_func (info->stream, "$%d", regno);
+      break;
+
+    case OP_REG_HW:
+      info->fprintf_func (info->stream, "%s", mips_hwr_names[regno]);
+      break;
+    }
+}
+
+/* Used to track the state carried over from previous operands in
+   an instruction.  */
+struct mips_print_arg_state {
+  /* The value of the last OP_INT seen.  We only use this for OP_MSB,
+     where the value is known to be unsigned and small.  */
+  unsigned int last_int;
+
+  /* The type and number of the last OP_REG seen.  We only use this for
+     OP_REPEAT_DEST_REG and OP_REPEAT_PREV_REG.  */
+  enum mips_reg_operand_type last_reg_type;
+  unsigned int last_regno;
+};
+
+/* Initialize STATE for the start of an instruction.  */
+
+static inline void
+init_print_arg_state (struct mips_print_arg_state *state)
+{
+  memset (state, 0, sizeof (*state));
+}
+
+/* Print operand OPERAND of OPCODE, using STATE to track inter-operand state.
+   UVAL is the encoding of the operand (shifted into bit 0) and BASE_PC is
+   the base address for OP_PCREL operands.  */
+
+static void
+print_insn_arg (struct disassemble_info *info,
+		struct mips_print_arg_state *state,
+		const struct mips_opcode *opcode,
+		const struct mips_operand *operand,
+		bfd_vma base_pc,
+		unsigned int uval)
 {
   const fprintf_ftype infprintf = info->fprintf_func;
-  unsigned int lsb, msb, msbd;
   void *is = info->stream;
-  int op;
 
-  lsb = 0;
-
-#define GET_OP(insn, field) \
-  (((insn) >> OP_SH_##field) & OP_MASK_##field)
-#define GET_OP_S(insn, field) \
-  ((GET_OP (insn, field) ^ ((OP_MASK_##field >> 1) + 1)) \
-   - ((OP_MASK_##field >> 1) + 1))
-  for (; *d != '\0'; d++)
+  switch (operand->type)
     {
-      switch (*d)
+    case OP_INT:
+      {
+	const struct mips_int_operand *int_op;
+
+	int_op = (const struct mips_int_operand *) operand;
+	uval = mips_decode_int_operand (int_op, uval);
+	state->last_int = uval;
+	if (int_op->print_hex)
+	  infprintf (is, "0x%x", uval);
+	else
+	  infprintf (is, "%d", uval);
+      }
+      break;
+
+    case OP_MAPPED_INT:
+      {
+	const struct mips_mapped_int_operand *mint_op;
+
+	mint_op = (const struct mips_mapped_int_operand *) operand;
+	uval = mint_op->int_map[uval];
+	state->last_int = uval;
+	if (mint_op->print_hex)
+	  infprintf (is, "0x%x", uval);
+	else
+	  infprintf (is, "%d", uval);
+      }
+      break;
+
+    case OP_MSB:
+      {
+	const struct mips_msb_operand *msb_op;
+
+	msb_op = (const struct mips_msb_operand *) operand;
+	uval += msb_op->bias;
+	if (msb_op->add_lsb)
+	  uval -= state->last_int;
+	infprintf (is, "0x%x", uval);
+      }
+      break;
+
+    case OP_REG:
+      {
+	const struct mips_reg_operand *reg_op;
+
+	reg_op = (const struct mips_reg_operand *) operand;
+	if (reg_op->reg_map)
+	  uval = reg_op->reg_map[uval];
+	print_reg (info, opcode, reg_op->reg_type, uval);
+
+	state->last_reg_type = reg_op->reg_type;
+	state->last_regno = uval;
+      }
+      break;
+
+    case OP_REG_PAIR:
+      {
+	const struct mips_reg_pair_operand *pair_op;
+
+	pair_op = (const struct mips_reg_pair_operand *) operand;
+	print_reg (info, opcode, pair_op->reg_type,
+		   pair_op->reg1_map[uval]);
+	infprintf (is, ",");
+	print_reg (info, opcode, pair_op->reg_type,
+		   pair_op->reg2_map[uval]);
+      }
+      break;
+
+    case OP_PCREL:
+      {
+	const struct mips_pcrel_operand *pcrel_op;
+
+	pcrel_op = (const struct mips_pcrel_operand *) operand;
+	info->target = mips_decode_pcrel_operand (pcrel_op, base_pc, uval);
+
+	/* Preserve the ISA bit for the GDB disassembler,
+	   otherwise clear it.  */
+	if (info->flavour != bfd_target_unknown_flavour)
+	  info->target &= -2;
+
+	(*info->print_address_func) (info->target, info);
+      }
+      break;
+
+    case OP_PERF_REG:
+      infprintf (is, "%d", uval);
+      break;
+
+    case OP_ADDIUSP_INT:
+      {
+	int sval;
+
+	sval = mips_signed_operand (operand, uval) * 4;
+	if (sval >= -8 && sval < 8)
+	  sval ^= 0x400;
+	infprintf (is, "%d", sval);
+	break;
+      }
+
+    case OP_CLO_CLZ_DEST:
+      {
+	unsigned int reg1, reg2;
+
+	reg1 = uval & 31;
+	reg2 = uval >> 5;
+	/* If one is zero use the other.  */
+	if (reg1 == reg2 || reg2 == 0)
+	  infprintf (is, "%s", mips_gpr_names[reg1]);
+	else if (reg1 == 0)
+	  infprintf (is, "%s", mips_gpr_names[reg2]);
+	else
+	  /* Bogus, result depends on processor.  */
+	  infprintf (is, "%s or %s", mips_gpr_names[reg1],
+		     mips_gpr_names[reg2]);
+      }
+      break;
+
+    case OP_LWM_SWM_LIST:
+      if (operand->size == 2)
+	{
+	  if (uval == 0)
+	    infprintf (is, "%s,%s",
+		       mips_gpr_names[16],
+		       mips_gpr_names[31]);
+	  else
+	    infprintf (is, "%s-%s,%s",
+		       mips_gpr_names[16],
+		       mips_gpr_names[16 + uval],
+		       mips_gpr_names[31]);
+	}
+      else
+	{
+	  int s_reg_encode;
+
+	  s_reg_encode = uval & 0xf;
+	  if (s_reg_encode != 0)
+	    {
+	      if (s_reg_encode == 1)
+		infprintf (is, "%s", mips_gpr_names[16]);
+	      else if (s_reg_encode < 9)
+		infprintf (is, "%s-%s",
+			   mips_gpr_names[16],
+			   mips_gpr_names[15 + s_reg_encode]);
+	      else if (s_reg_encode == 9)
+		infprintf (is, "%s-%s,%s",
+			   mips_gpr_names[16],
+			   mips_gpr_names[23],
+			   mips_gpr_names[30]);
+	      else
+		infprintf (is, "UNKNOWN");
+	    }
+
+	  if (uval & 0x10) /* For ra.  */
+	    {
+	      if (s_reg_encode == 0)
+		infprintf (is, "%s", mips_gpr_names[31]);
+	      else
+		infprintf (is, ",%s", mips_gpr_names[31]);
+	    }
+	}
+      break;
+
+    case OP_ENTRY_EXIT_LIST:
+      {
+	const char *sep;
+	unsigned int amask, smask;
+
+	sep = "";
+	amask = (uval >> 3) & 7;
+	if (amask > 0 && amask < 5)
+	  {
+	    infprintf (is, "%s", mips_gpr_names[4]);
+	    if (amask > 1)
+	      infprintf (is, "-%s", mips_gpr_names[amask + 3]);
+	    sep = ",";
+	  }
+
+	smask = (uval >> 1) & 3;
+	if (smask == 3)
+	  {
+	    infprintf (is, "%s??", sep);
+	    sep = ",";
+	  }
+	else if (smask > 0)
+	  {
+	    infprintf (is, "%s%s", sep, mips_gpr_names[16]);
+	    if (smask > 1)
+	      infprintf (is, "-%s", mips_gpr_names[smask + 15]);
+	    sep = ",";
+	  }
+
+	if (uval & 1)
+	  {
+	    infprintf (is, "%s%s", sep, mips_gpr_names[31]);
+	    sep = ",";
+	  }
+
+	if (amask == 5 || amask == 6)
+	  {
+	    infprintf (is, "%s%s", sep, mips_fpr_names[0]);
+	    if (amask == 6)
+	      infprintf (is, "-%s", mips_fpr_names[1]);
+	  }
+      }
+      break;
+
+    case OP_SAVE_RESTORE_LIST:
+      /* Should be handled by the caller due to extend behavior.  */
+      abort ();
+
+    case OP_MDMX_IMM_REG:
+      {
+	unsigned int vsel;
+
+	vsel = uval >> 5;
+	uval &= 31;
+	if ((vsel & 0x10) == 0)
+	  {
+	    int fmt;
+
+	    vsel &= 0x0f;
+	    for (fmt = 0; fmt < 3; fmt++, vsel >>= 1)
+	      if ((vsel & 1) == 0)
+		break;
+	    print_reg (info, opcode, OP_REG_VEC, uval);
+	    infprintf (is, "[%d]", vsel >> 1);
+	  }
+	else if ((vsel & 0x08) == 0)
+	  print_reg (info, opcode, OP_REG_VEC, uval);
+	else
+	  infprintf (is, "0x%x", uval);
+      }
+      break;
+
+    case OP_REPEAT_PREV_REG:
+      print_reg (info, opcode, state->last_reg_type, state->last_regno);
+      break;
+
+    case OP_REPEAT_DEST_REG:
+      /* Should always match OP_REPEAT_PREV_REG first.  */
+      abort ();
+
+    case OP_PC:
+      infprintf (is, "$pc");
+      break;
+    }
+}
+
+/* Print the arguments for INSN, which is described by OPCODE.
+   Use DECODE_OPERAND to get the encoding of each operand.  Use BASE_PC
+   as the base of OP_PCREL operands.  */
+
+static void
+print_insn_args (struct disassemble_info *info,
+		 const struct mips_opcode *opcode,
+		 const struct mips_operand *(*decode_operand) (const char *),
+		 unsigned int insn, bfd_vma base_pc)
+{
+  const fprintf_ftype infprintf = info->fprintf_func;
+  void *is = info->stream;
+  struct mips_print_arg_state state;
+  const struct mips_operand *operand;
+  const char *s;
+
+  init_print_arg_state (&state);
+  for (s = opcode->args; *s; ++s)
+    {
+      switch (*s)
 	{
 	case ',':
 	case '(':
 	case ')':
-	case '[':
-	case ']':
-	  infprintf (is, "%c", *d);
-	  break;
-
-	case '+':
-	  /* Extension character; switch for second char.  */
-	  d++;
-	  switch (*d)
-	    {
-	    case '\0':
-	      /* xgettext:c-format */
-	      infprintf (is,
-			 _("# internal error, "
-			   "incomplete extension sequence (+)"));
-	      return;
-
-	    case 'A':
-	      lsb = GET_OP (l, SHAMT);
-	      infprintf (is, "0x%x", lsb);
-	      break;
-	
-	    case 'B':
-	      msb = GET_OP (l, INSMSB);
-	      infprintf (is, "0x%x", msb - lsb + 1);
-	      break;
-
-	    case '1':
-	      infprintf (is, "0x%x", GET_OP (l, UDI1));
-	      break;
-	      
-	    case '2':
-	      infprintf (is, "0x%x", GET_OP (l, UDI2));
-	      break;
-	      
-	    case '3':
-	      infprintf (is, "0x%x", GET_OP (l, UDI3));
-	      break;
-      
-	    case '4':
-	      infprintf (is, "0x%x", GET_OP (l, UDI4));
-	      break;
-	      
-	    case 'C':
-	    case 'H':
-	      msbd = GET_OP (l, EXTMSBD);
-	      infprintf (is, "0x%x", msbd + 1);
-	      break;
-
-	    case 'D':
-	      {
-		const struct mips_cp0sel_name *n;
-		unsigned int cp0reg, sel;
-
-		cp0reg = GET_OP (l, RD);
-		sel = GET_OP (l, SEL);
-
-		/* CP0 register including 'sel' code for mtcN (et al.), to be
-		   printed textually if known.  If not known, print both
-		   CP0 register name and sel numerically since CP0 register
-		   with sel 0 may have a name unrelated to register being
-		   printed.  */
-		n = lookup_mips_cp0sel_name(mips_cp0sel_names,
-					    mips_cp0sel_names_len, cp0reg, sel);
-		if (n != NULL)
-		  infprintf (is, "%s", n->name);
-		else
-		  infprintf (is, "$%d,%d", cp0reg, sel);
-		break;
-	      }
-
-	    case 'E':
-	      lsb = GET_OP (l, SHAMT) + 32;
-	      infprintf (is, "0x%x", lsb);
-	      break;
-	
-	    case 'F':
-	      msb = GET_OP (l, INSMSB) + 32;
-	      infprintf (is, "0x%x", msb - lsb + 1);
-	      break;
-
-	    case 'G':
-	      msbd = GET_OP (l, EXTMSBD) + 32;
-	      infprintf (is, "0x%x", msbd + 1);
-	      break;
-
-	    case 'J':		/* hypcall operand */
-	      infprintf (is, "0x%x", GET_OP (l, CODE10));
-	      break;
-
-	    case 't': /* Coprocessor 0 reg name */
-	      infprintf (is, "%s", mips_cp0_names[GET_OP (l, RT)]);
-	      break;
-
-	    case 'T': /* Coprocessor 0 reg name */
-	      {
-		const struct mips_cp0sel_name *n;
-		unsigned int cp0reg, sel;
-
-		cp0reg = GET_OP (l, RT);
-		sel = GET_OP (l, SEL);
-
-		/* CP0 register including 'sel' code for mftc0, to be
-		   printed textually if known.  If not known, print both
-		   CP0 register name and sel numerically since CP0 register
-		   with sel 0 may have a name unrelated to register being
-		   printed.  */
-		n = lookup_mips_cp0sel_name(mips_cp0sel_names,
-					    mips_cp0sel_names_len, cp0reg, sel);
-		if (n != NULL)
-		  infprintf (is, "%s", n->name);
-		else
-		  infprintf (is, "$%d,%d", cp0reg, sel);
-		break;
-	      }
-
-	    case 'x':		/* bbit bit index */
-	      infprintf (is, "0x%x", GET_OP (l, BBITIND));
-	      break;
-
-	    case 'p':		/* cins, cins32, exts and exts32 position */
-	      infprintf (is, "0x%x", GET_OP (l, CINSPOS));
-	      break;
-
-	    case 's':		/* cins and exts length-minus-one */
-	      infprintf (is, "0x%x", GET_OP (l, CINSLM1));
-	      break;
-
-	    case 'S':		/* cins32 and exts32 length-minus-one field */
-	      infprintf (is, "0x%x", GET_OP (l, CINSLM1));
-	      break;
-
-	    case 'Q':		/* seqi/snei immediate field */
-	      infprintf (is, "%d", GET_OP_S (l, SEQI));
-	      break;
-
-	    case 'a':		/* 8-bit signed offset in bit 6 */
-	      infprintf (is, "%d", GET_OP_S (l, OFFSET_A));
-	      break;
-
-	    case 'b':		/* 8-bit signed offset in bit 3 */
-	      infprintf (is, "%d", GET_OP_S (l, OFFSET_B));
-	      break;
-
-	    case 'c':		/* 9-bit signed offset in bit 6 */
-	      /* Left shift 4 bits to print the real offset.  */
-	      infprintf (is, "%d", GET_OP_S (l, OFFSET_C) << 4);
-	      break;
-
-	    case 'z':
-	      infprintf (is, "%s", mips_gpr_names[GET_OP (l, RZ)]);
-	      break;
-
-	    case 'Z':
-	      infprintf (is, "%s", mips_fpr_names[GET_OP (l, FZ)]);
-	      break;
-
-	    case 'j':	/* 9-bit signed offset in bit 7.  */
-	      infprintf (is, "%d", GET_OP_S (l, EVAOFFSET));
-	      break;
-
-	    default:
-	      /* xgettext:c-format */
-	      infprintf (is,
-			 _("# internal error, "
-			   "undefined extension sequence (+%c)"),
-			 *d);
-	      return;
-	    }
-	  break;
-
-	case '2':
-	  infprintf (is, "0x%x", GET_OP (l, BP));
-	  break;
-
-	case '3':
-	  infprintf (is, "0x%x", GET_OP (l, SA3));
-	  break;
-
-	case '4':
-	  infprintf (is, "0x%x", GET_OP (l, SA4));
-	  break;
-
-	case '5':
-	  infprintf (is, "0x%x", GET_OP (l, IMM8));
-	  break;
-
-	case '6':
-	  infprintf (is, "0x%x", GET_OP (l, RS));
-	  break;
-
-	case '7':
-	  infprintf (is, "$ac%d", GET_OP (l, DSPACC));
-	  break;
-
-	case '8':
-	  infprintf (is, "0x%x", GET_OP (l, WRDSP));
-	  break;
-
-	case '9':
-	  infprintf (is, "$ac%d", GET_OP (l, DSPACC_S));
-	  break;
-
-	case '0': /* dsp 6-bit signed immediate in bit 20 */
-	  infprintf (is, "%d", GET_OP_S (l, DSPSFT));
-	  break;
-
-	case ':': /* dsp 7-bit signed immediate in bit 19 */
-	  infprintf (is, "%d", GET_OP_S (l, DSPSFT_7));
-	  break;
-
-	case '~':
-	  infprintf (is, "%d", GET_OP_S (l, OFFSET12));
-	  break;
-
-	case '\\':
-	  infprintf (is, "0x%x", GET_OP (l, 3BITPOS));
-	  break;
-
-	case '\'':
-	  infprintf (is, "0x%x", GET_OP (l, RDDSP));
-	  break;
-
-	case '@': /* dsp 10-bit signed immediate in bit 16 */
-	  infprintf (is, "%d", GET_OP_S (l, IMM10));
-	  break;
-
-	case '!':
-	  infprintf (is, "%d", GET_OP (l, MT_U));
-	  break;
-
-	case '$':
-	  infprintf (is, "%d", GET_OP (l, MT_H));
-	  break;
-
-	case '*':
-	  infprintf (is, "$ac%d", GET_OP (l, MTACC_T));
-	  break;
-
-	case '&':
-	  infprintf (is, "$ac%d", GET_OP (l, MTACC_D));
-	  break;
-
-	case 'g':
-	  /* Coprocessor register for CTTC1, MTTC2, MTHC2, CTTC2.  */
-	  infprintf (is, "$%d", GET_OP (l, RD));
-	  break;
-
-	case 's':
-	case 'b':
-	case 'r':
-	case 'v':
-	  infprintf (is, "%s", mips_gpr_names[GET_OP (l, RS)]);
-	  break;
-
-	case 't':
-	case 'w':
-	  infprintf (is, "%s", mips_gpr_names[GET_OP (l, RT)]);
-	  break;
-
-	case 'i':
-	case 'u':
-	  infprintf (is, "0x%x", GET_OP (l, IMMEDIATE));
-	  break;
-
-	case 'j': /* Same as i, but sign-extended.  */
-	case 'o':
-	  infprintf (is, "%d", GET_OP_S (l, DELTA));
-	  break;
-
-	case 'h':
-	  infprintf (is, "0x%x", GET_OP (l, PREFX));
-	  break;
-
-	case 'k':
-	  infprintf (is, "0x%x", GET_OP (l, CACHE));
-	  break;
-
-	case 'a':
-	  info->target = (((pc + 4) & ~(bfd_vma) 0x0fffffff)
-			  | (GET_OP (l, TARGET) << 2));
-	  /* For gdb disassembler, force odd address on jalx.  */
-	  if (info->flavour == bfd_target_unknown_flavour
-	      && strcmp (opp->name, "jalx") == 0)
-	    info->target |= 1;
-	  (*info->print_address_func) (info->target, info);
-	  break;
-
-	case 'p':
-	  /* Sign extend the displacement.  */
-	  info->target = (GET_OP_S (l, DELTA) << 2) + pc + INSNLEN;
-	  (*info->print_address_func) (info->target, info);
-	  break;
-
-	case 'd':
-	  infprintf (is, "%s", mips_gpr_names[GET_OP (l, RD)]);
-	  break;
-
-	case 'U':
-	  {
-	    /* First check for both rd and rt being equal.  */
-	    unsigned int reg;
-
-	    reg = GET_OP (l, RD);
-	    if (reg == GET_OP (l, RT))
-	      infprintf (is, "%s", mips_gpr_names[reg]);
-	    else
-	      {
-		/* If one is zero use the other.  */
-		if (reg == 0)
-		  infprintf (is, "%s", mips_gpr_names[GET_OP (l, RT)]);
-		else if (GET_OP (l, RT) == 0)
-		  infprintf (is, "%s", mips_gpr_names[reg]);
-		else /* Bogus, result depends on processor.  */
-		  infprintf (is, "%s or %s",
-			     mips_gpr_names[reg],
-			     mips_gpr_names[GET_OP (l, RT)]);
-	      }
-	  }
-	  break;
-
-	case 'z':
-	  infprintf (is, "%s", mips_gpr_names[0]);
-	  break;
-
-	case '<':
-	case '1':
-	  infprintf (is, "0x%x", GET_OP (l, SHAMT));
-	  break;
-
-	case 'c':
-	  infprintf (is, "0x%x", GET_OP (l, CODE));
-	  break;
-
-	case 'q':
-	  infprintf (is, "0x%x", GET_OP (l, CODE2));
-	  break;
-
-	case 'C':
-	  infprintf (is, "0x%x", GET_OP (l, COPZ));
-	  break;
-
-	case 'B':
-	  infprintf (is, "0x%x", GET_OP (l, CODE20));
-	  break;
-
-	case 'J':
-	  infprintf (is, "0x%x", GET_OP (l, CODE19));
-	  break;
-
-	case 'S':
-	case 'V':
-	  infprintf (is, "%s", mips_fpr_names[GET_OP (l, FS)]);
-	  break;
-
-	case 'T':
-	case 'W':
-	  infprintf (is, "%s", mips_fpr_names[GET_OP (l, FT)]);
-	  break;
-
-	case 'D':
-	  infprintf (is, "%s", mips_fpr_names[GET_OP (l, FD)]);
-	  break;
-
-	case 'R':
-	  infprintf (is, "%s", mips_fpr_names[GET_OP (l, FR)]);
-	  break;
-
-	case 'E':
-	  /* Coprocessor register for lwcN instructions, et al.
-
-	     Note that there is no load/store cp0 instructions, and
-	     that FPU (cp1) instructions disassemble this field using
-	     'T' format.  Therefore, until we gain understanding of
-	     cp2 register names, we can simply print the register
-	     numbers.  */
-	  infprintf (is, "$%d", GET_OP (l, RT));
-	  break;
-
-	case 'G':
-	  /* Coprocessor register for mtcN instructions, et al.  Note
-	     that FPU (cp1) instructions disassemble this field using
-	     'S' format.  Therefore, we only need to worry about cp0,
-	     cp2, and cp3.  */
-	  op = GET_OP (l, OP);
-	  if (op == OP_OP_COP0)
-	    infprintf (is, "%s", mips_cp0_names[GET_OP (l, RD)]);
-	  else
-	    infprintf (is, "$%d", GET_OP (l, RD));
-	  break;
-
-	case 'K':
-	  infprintf (is, "%s", mips_hwr_names[GET_OP (l, RD)]);
-	  break;
-
-	case 'N':
-	  infprintf (is,
-		     (opp->pinfo & (FP_D | FP_S)) != 0 ? "$fcc%d" : "$cc%d",
-		     GET_OP (l, BCC));
-	  break;
-
-	case 'M':
-	  infprintf (is, "$fcc%d", GET_OP (l, CCC));
-	  break;
-
-	case 'P':
-	  infprintf (is, "%d", GET_OP (l, PERFREG));
-	  break;
-
-	case 'e':
-	  infprintf (is, "%d", GET_OP (l, VECBYTE));
-	  break;
-
-	case '%':
-	  infprintf (is, "%d", GET_OP (l, VECALIGN));
-	  break;
-
-	case 'H':
-	  infprintf (is, "%d", GET_OP (l, SEL));
-	  break;
-
-	case 'O':
-	  infprintf (is, "%d", GET_OP (l, ALN));
-	  break;
-
-	case 'Q':
-	  {
-	    unsigned int vsel = GET_OP (l, VSEL);
-
-	    if ((vsel & 0x10) == 0)
-	      {
-		int fmt;
-
-		vsel &= 0x0f;
-		for (fmt = 0; fmt < 3; fmt++, vsel >>= 1)
-		  if ((vsel & 1) == 0)
-		    break;
-		infprintf (is, "$v%d[%d]", GET_OP (l, FT), vsel >> 1);
-	      }
-	    else if ((vsel & 0x08) == 0)
-	      {
-		infprintf (is, "$v%d", GET_OP (l, FT));
-	      }
-	    else
-	      {
-		infprintf (is, "0x%x", GET_OP (l, FT));
-	      }
-	  }
-	  break;
-
-	case 'X':
-	  infprintf (is, "$v%d", GET_OP (l, FD));
-	  break;
-
-	case 'Y':
-	  infprintf (is, "$v%d", GET_OP (l, FS));
-	  break;
-
-	case 'Z':
-	  infprintf (is, "$v%d", GET_OP (l, FT));
+	  infprintf (is, "%c", *s);
 	  break;
 
 	default:
-	  /* xgettext:c-format */
-	  infprintf (is, _("# internal error, undefined modifier (%c)"), *d);
-	  return;
+	  operand = decode_operand (s);
+	  if (!operand)
+	    {
+	      /* xgettext:c-format */
+	      infprintf (is,
+			 _("# internal error, undefined operand in `%s %s'"),
+			 opcode->name, opcode->args);
+	      return;
+	    }
+	  if (operand->type == OP_REG
+	      && s[1] == ','
+	      && s[2] == 'H'
+	      && opcode->name[strlen (opcode->name) - 1] == '0')
+	    {
+	      /* Coprocessor register 0 with sel field (MT ASE).  */
+	      const struct mips_cp0sel_name *n;
+	      unsigned int reg, sel;
+
+	      reg = mips_extract_operand (operand, insn);
+	      s += 2;
+	      operand = decode_operand (s);
+	      sel = mips_extract_operand (operand, insn);
+
+	      /* CP0 register including 'sel' code for mftc0, to be
+		 printed textually if known.  If not known, print both
+		 CP0 register name and sel numerically since CP0 register
+		 with sel 0 may have a name unrelated to register being
+		 printed.  */
+	      n = lookup_mips_cp0sel_name (mips_cp0sel_names,
+					   mips_cp0sel_names_len,
+					   reg, sel);
+	      if (n != NULL)
+		infprintf (is, "%s", n->name);
+	      else
+		infprintf (is, "$%d,%d", reg, sel);
+	    }
+	  else
+	    print_insn_arg (info, &state, opcode, operand, base_pc,
+			    mips_extract_operand (operand, insn));
+	  if (*s == 'm' || *s == '+')
+	    ++s;
+	  break;
 	}
     }
 }
@@ -1475,6 +1289,8 @@ print_insn_mips (bfd_vma memaddr,
 		 int word,
 		 struct disassemble_info *info)
 {
+#define GET_OP(insn, field)			\
+  (((insn) >> OP_SH_##field) & OP_MASK_##field)
   static const struct mips_opcode *mips_hash[OP_MASK_OP + 1];
   const fprintf_ftype infprintf = info->fprintf_func;
   const struct mips_opcode *op;
@@ -1522,8 +1338,6 @@ print_insn_mips (bfd_vma memaddr,
 	      && !(no_aliases && (op->pinfo2 & INSN2_ALIAS))
 	      && (word & op->mask) == op->match)
 	    {
-	      const char *d;
-
 	      /* We always allow to disassemble the jalx instruction.  */
 	      if (!opcode_is_member (op, mips_isa, mips_ase, mips_processor)
 		  && strcmp (op->name, "jalx"))
@@ -1554,18 +1368,17 @@ print_insn_mips (bfd_vma memaddr,
 
 	      infprintf (is, "%s", op->name);
 
-	      d = op->args;
-	      if (d != NULL && *d != '\0')
+	      if (op->args[0])
 		{
 		  infprintf (is, "\t");
-		  print_insn_args (d, word, memaddr, info, op);
+		  print_insn_args (info, op, decode_mips_operand, word,
+				   memaddr + 4);
 		}
 
 	      return INSNLEN;
 	    }
 	}
     }
-#undef GET_OP_S
 #undef GET_OP
 
   /* Handle undefined instructions.  */
@@ -1577,22 +1390,22 @@ print_insn_mips (bfd_vma memaddr,
 /* Disassemble an operand for a mips16 instruction.  */
 
 static void
-print_mips16_insn_arg (char type,
-		       const struct mips_opcode *op,
-		       int l,
-		       bfd_boolean use_extend,
-		       int extend,
-		       bfd_vma memaddr,
-		       struct disassemble_info *info)
+print_mips16_insn_arg (struct disassemble_info *info,
+		       struct mips_print_arg_state *state,
+		       const struct mips_opcode *opcode,
+		       char type, bfd_vma memaddr,
+		       unsigned insn, bfd_boolean use_extend,
+		       unsigned extend, bfd_boolean is_offset)
 {
   const fprintf_ftype infprintf = info->fprintf_func;
   void *is = info->stream;
+  const struct mips_operand *operand, *ext_operand;
+  unsigned int uval;
+  bfd_vma baseaddr;
 
-#define GET_OP(insn, field) \
-  (((insn) >> MIPS16OP_SH_##field) & MIPS16OP_MASK_##field)
-#define GET_OP_S(insn, field) \
-  ((GET_OP (insn, field) ^ ((MIPS16OP_MASK_##field >> 1) + 1)) \
-   - ((MIPS16OP_MASK_##field >> 1) + 1))
+  if (!use_extend)
+    extend = 0;
+
   switch (type)
     {
     case ',':
@@ -1601,458 +1414,159 @@ print_mips16_insn_arg (char type,
       infprintf (is, "%c", type);
       break;
 
-    case 'y':
-    case 'w':
-      infprintf (is, "%s", mips16_reg_names (GET_OP (l, RY)));
-      break;
+    default:
+      operand = decode_mips16_operand (type, FALSE);
+      if (!operand)
+	{
+	  /* xgettext:c-format */
+	  infprintf (is, _("# internal error, undefined operand in `%s %s'"),
+		     opcode->name, opcode->args);
+	  return;
+	}
 
-    case 'x':
-    case 'v':
-      infprintf (is, "%s", mips16_reg_names (GET_OP (l, RX)));
-      break;
+      if (operand->type == OP_SAVE_RESTORE_LIST)
+	{
+	  /* Handle this case here because of the complex interation
+	     with the EXTEND opcode.  */
+	  unsigned int amask, nargs, nstatics, nsreg, smask, frame_size, i, j;
+	  const char *sep;
 
-    case 'z':
-      infprintf (is, "%s", mips16_reg_names (GET_OP (l, RZ)));
-      break;
+	  amask = extend & 0xf;
+	  if (amask == MIPS16_ALL_ARGS)
+	    {
+	      nargs = 4;
+	      nstatics = 0;
+	    }
+	  else if (amask == MIPS16_ALL_STATICS)
+	    {
+	      nargs = 0;
+	      nstatics = 4;
+	    }
+	  else
+	    {
+	      nargs = amask >> 2;
+	      nstatics = amask & 3;
+	    }
 
-    case 'Z':
-      infprintf (is, "%s", mips16_reg_names (GET_OP (l, MOVE32Z)));
-      break;
+	  sep = "";
+	  if (nargs > 0)
+	    {
+	      infprintf (is, "%s", mips_gpr_names[4]);
+	      if (nargs > 1)
+		infprintf (is, "-%s", mips_gpr_names[4 + nargs - 1]);
+	      sep = ",";
+	    }
 
-    case '0':
-      infprintf (is, "%s", mips_gpr_names[0]);
-      break;
+	  frame_size = ((extend & 0xf0) | (insn & 0x0f)) * 8;
+	  if (frame_size == 0 && !use_extend)
+	    frame_size = 128;
+	  infprintf (is, "%s%d", sep, frame_size);
 
-    case 'S':
-      infprintf (is, "%s", mips_gpr_names[29]);
-      break;
+	  if (insn & 0x40)		/* $ra */
+	    infprintf (is, ",%s", mips_gpr_names[31]);
 
-    case 'P':
-      infprintf (is, "$pc");
-      break;
+	  nsreg = (extend >> 8) & 0x7;
+	  smask = 0;
+	  if (insn & 0x20)		/* $s0 */
+	    smask |= 1 << 0;
+	  if (insn & 0x10)		/* $s1 */
+	    smask |= 1 << 1;
+	  if (nsreg > 0)		/* $s2-$s8 */
+	    smask |= ((1 << nsreg) - 1) << 2;
 
-    case 'R':
-      infprintf (is, "%s", mips_gpr_names[31]);
-      break;
-
-    case 'X':
-      infprintf (is, "%s", mips_gpr_names[GET_OP (l, REGR32)]);
-      break;
-
-    case 'Y':
-      infprintf (is, "%s", mips_gpr_names[MIPS16OP_EXTRACT_REG32R (l)]);
-      break;
-
-    case '<':
-    case '>':
-    case '[':
-    case ']':
-    case '4':
-    case '5':
-    case 'H':
-    case 'W':
-    case 'D':
-    case 'j':
-    case '6':
-    case '8':
-    case 'V':
-    case 'C':
-    case 'U':
-    case 'k':
-    case 'K':
-    case 'p':
-    case 'q':
-    case 'A':
-    case 'B':
-    case 'E':
-      {
-	int immed, nbits, shift, signedp, extbits, pcrel, extu, branch;
-
-	shift = 0;
-	signedp = 0;
-	extbits = 16;
-	pcrel = 0;
-	extu = 0;
-	branch = 0;
-	switch (type)
-	  {
-	  case '<':
-	    nbits = 3;
-	    immed = GET_OP (l, RZ);
-	    extbits = 5;
-	    extu = 1;
-	    break;
-	  case '>':
-	    nbits = 3;
-	    immed = GET_OP (l, RX);
-	    extbits = 5;
-	    extu = 1;
-	    break;
-	  case '[':
-	    nbits = 3;
-	    immed = GET_OP (l, RZ);
-	    extbits = 6;
-	    extu = 1;
-	    break;
-	  case ']':
-	    nbits = 3;
-	    immed = GET_OP (l, RX);
-	    extbits = 6;
-	    extu = 1;
-	    break;
-	  case '4':
-	    nbits = 4;
-	    immed = GET_OP (l, IMM4);
-	    signedp = 1;
-	    extbits = 15;
-	    break;
-	  case '5':
-	    nbits = 5;
-	    immed = GET_OP (l, IMM5);
-	    info->insn_type = dis_dref;
-	    info->data_size = 1;
-	    break;
-	  case 'H':
-	    nbits = 5;
-	    shift = 1;
-	    immed = GET_OP (l, IMM5);
-	    info->insn_type = dis_dref;
-	    info->data_size = 2;
-	    break;
-	  case 'W':
-	    nbits = 5;
-	    shift = 2;
-	    immed = GET_OP (l, IMM5);
-	    if ((op->pinfo & MIPS16_INSN_READ_PC) == 0
-		&& (op->pinfo & MIPS16_INSN_READ_SP) == 0)
+	  for (i = 0; i < 9; i++)
+	    if (smask & (1 << i))
 	      {
-		info->insn_type = dis_dref;
-		info->data_size = 4;
+		infprintf (is, ",%s", mips_gpr_names[i == 8 ? 30 : (16 + i)]);
+		/* Skip over string of set bits.  */
+		for (j = i; smask & (2 << j); j++)
+		  continue;
+		if (j > i)
+		  infprintf (is, "-%s", mips_gpr_names[j == 8 ? 30 : (16 + j)]);
+		i = j + 1;
 	      }
-	    break;
-	  case 'D':
-	    nbits = 5;
-	    shift = 3;
-	    immed = GET_OP (l, IMM5);
-	    info->insn_type = dis_dref;
-	    info->data_size = 8;
-	    break;
-	  case 'j':
-	    nbits = 5;
-	    immed = GET_OP (l, IMM5);
-	    signedp = 1;
-	    break;
-	  case '6':
-	    nbits = 6;
-	    immed = GET_OP (l, IMM6);
-	    break;
-	  case '8':
-	    nbits = 8;
-	    immed = GET_OP (l, IMM8);
-	    break;
-	  case 'V':
-	    nbits = 8;
-	    shift = 2;
-	    immed = GET_OP (l, IMM8);
-	    /* FIXME: This might be lw, or it might be addiu to $sp or
-               $pc.  We assume it's load.  */
-	    info->insn_type = dis_dref;
-	    info->data_size = 4;
-	    break;
-	  case 'C':
-	    nbits = 8;
-	    shift = 3;
-	    immed = GET_OP (l, IMM8);
-	    info->insn_type = dis_dref;
-	    info->data_size = 8;
-	    break;
-	  case 'U':
-	    nbits = 8;
-	    immed = GET_OP (l, IMM8);
-	    extu = 1;
-	    break;
-	  case 'k':
-	    nbits = 8;
-	    immed = GET_OP (l, IMM8);
-	    signedp = 1;
-	    break;
-	  case 'K':
-	    nbits = 8;
-	    shift = 3;
-	    immed = GET_OP (l, IMM8);
-	    signedp = 1;
-	    break;
-	  case 'p':
-	    nbits = 8;
-	    immed = GET_OP (l, IMM8);
-	    signedp = 1;
-	    pcrel = 1;
-	    branch = 1;
-	    break;
-	  case 'q':
-	    nbits = 11;
-	    immed = GET_OP (l, IMM11);
-	    signedp = 1;
-	    pcrel = 1;
-	    branch = 1;
-	    break;
-	  case 'A':
-	    nbits = 8;
-	    shift = 2;
-	    immed = GET_OP (l, IMM8);
-	    pcrel = 1;
-	    /* FIXME: This can be lw or la.  We assume it is lw.  */
-	    info->insn_type = dis_dref;
-	    info->data_size = 4;
-	    break;
-	  case 'B':
-	    nbits = 5;
-	    shift = 3;
-	    immed = GET_OP (l, IMM5);
-	    pcrel = 1;
-	    info->insn_type = dis_dref;
-	    info->data_size = 8;
-	    break;
-	  case 'E':
-	    nbits = 5;
-	    shift = 2;
-	    immed = GET_OP (l, IMM5);
-	    pcrel = 1;
-	    break;
-	  default:
-	    abort ();
-	  }
+	  /* Statics $ax - $a3.  */
+	  if (nstatics == 1)
+	    infprintf (is, ",%s", mips_gpr_names[7]);
+	  else if (nstatics > 0)
+	    infprintf (is, ",%s-%s",
+		       mips_gpr_names[7 - nstatics + 1],
+		       mips_gpr_names[7]);
+	  break;
+	}
 
-	if (! use_extend)
-	  {
-	    if (signedp && immed >= (1 << (nbits - 1)))
-	      immed -= 1 << nbits;
-	    immed <<= shift;
-	    if ((type == '<' || type == '>' || type == '[' || type == ']')
-		&& immed == 0)
-	      immed = 8;
-	  }
-	else
-	  {
-	    if (extbits == 16)
-	      immed |= ((extend & 0x1f) << 11) | (extend & 0x7e0);
-	    else if (extbits == 15)
-	      immed |= ((extend & 0xf) << 11) | (extend & 0x7f0);
-	    else
-	      immed = ((extend >> 6) & 0x1f) | (extend & 0x20);
-	    immed &= (1 << extbits) - 1;
-	    if (! extu && immed >= (1 << (extbits - 1)))
-	      immed -= 1 << extbits;
-	  }
+      if (is_offset && operand->type == OP_INT)
+	{
+	  const struct mips_int_operand *int_op;
 
-	if (! pcrel)
-	  infprintf (is, "%d", immed);
-	else
-	  {
-	    bfd_vma baseaddr;
+	  int_op = (const struct mips_int_operand *) operand;
+	  info->insn_type = dis_dref;
+	  info->data_size = 1 << int_op->shift;
+	}
 
-	    if (branch)
-	      {
-		immed *= 2;
-		baseaddr = memaddr + 2;
-	      }
-	    else if (use_extend)
-	      baseaddr = memaddr - 2;
-	    else
-	      {
-		int status;
-		bfd_byte buffer[2];
+      if (operand->size == 26)
+	/* In this case INSN is the first two bytes of the instruction
+	   and EXTEND is the second two bytes.  */
+	uval = ((insn & 0x1f) << 21) | ((insn & 0x3e0) << 11) | extend;
+      else
+	{
+	  /* Calculate the full field value.  */
+	  uval = mips_extract_operand (operand, insn);
+	  if (use_extend)
+	    {
+	      ext_operand = decode_mips16_operand (type, TRUE);
+	      if (ext_operand != operand)
+		{
+		  operand = ext_operand;
+		  if (operand->size == 16)
+		    uval |= ((extend & 0x1f) << 11) | (extend & 0x7e0);
+		  else if (operand->size == 15)
+		    uval |= ((extend & 0xf) << 11) | (extend & 0x7f0);
+		  else
+		    uval = ((extend >> 6) & 0x1f) | (extend & 0x20);
+		}
+	    }
+	}
 
-		baseaddr = memaddr;
+      baseaddr = memaddr + 2;
+      if (operand->type == OP_PCREL)
+	{
+	  const struct mips_pcrel_operand *pcrel_op;
 
-		/* If this instruction is in the delay slot of a jr
-                   instruction, the base address is the address of the
-                   jr instruction.  If it is in the delay slot of jalr
-                   instruction, the base address is the address of the
-                   jalr instruction.  This test is unreliable: we have
-                   no way of knowing whether the previous word is
-                   instruction or data.  */
-		status = (*info->read_memory_func) (memaddr - 4, buffer, 2,
-						    info);
-		if (status == 0
-		    && (((info->endian == BFD_ENDIAN_BIG
-			  ? bfd_getb16 (buffer)
-			  : bfd_getl16 (buffer))
-			 & 0xf800) == 0x1800))
-		  baseaddr = memaddr - 4;
-		else
-		  {
-		    status = (*info->read_memory_func) (memaddr - 2, buffer,
-							2, info);
-		    if (status == 0
+	  pcrel_op = (const struct mips_pcrel_operand *) operand;
+	  if (!pcrel_op->include_isa_bit && use_extend)
+	    baseaddr = memaddr - 2;
+	  else if (!pcrel_op->include_isa_bit)
+	     {
+	       bfd_byte buffer[2];
+
+	       /* If this instruction is in the delay slot of a JR
+		  instruction, the base address is the address of the
+		  JR instruction.  If it is in the delay slot of a JALR
+		  instruction, the base address is the address of the
+		  JALR instruction.  This test is unreliable: we have
+		  no way of knowing whether the previous word is
+		  instruction or data.  */
+	       if (info->read_memory_func (memaddr - 4, buffer, 2, info) == 0
+		   && (((info->endian == BFD_ENDIAN_BIG
+			 ? bfd_getb16 (buffer)
+			 : bfd_getl16 (buffer))
+			& 0xf800) == 0x1800))
+		 baseaddr = memaddr - 4;
+	       else if (info->read_memory_func (memaddr - 2, buffer, 2,
+						info) == 0
 			&& (((info->endian == BFD_ENDIAN_BIG
 			      ? bfd_getb16 (buffer)
 			      : bfd_getl16 (buffer))
 			     & 0xf81f) == 0xe800))
-		      baseaddr = memaddr - 2;
-		  }
-	      }
-	    info->target = (baseaddr & ~((1 << shift) - 1)) + immed;
-	    if (pcrel && branch
-		&& info->flavour == bfd_target_unknown_flavour)
-	      /* For gdb disassembler, maintain odd address.  */
-	      info->target |= 1;
-	    (*info->print_address_func) (info->target, info);
-	  }
-      }
+		 baseaddr = memaddr - 2;
+	       else
+		 baseaddr = memaddr;
+	     }
+	}
+
+      print_insn_arg (info, state, opcode, operand, baseaddr, uval);
       break;
-
-    case 'a':
-      {
-	int jalx = l & 0x400;
-
-	if (! use_extend)
-	  extend = 0;
-	l = ((l & 0x1f) << 23) | ((l & 0x3e0) << 13) | (extend << 2);
-	if (!jalx && info->flavour == bfd_target_unknown_flavour)
-	  /* For gdb disassembler, maintain odd address.  */
-	  l |= 1;
-      }
-      info->target = ((memaddr + 4) & ~(bfd_vma) 0x0fffffff) | l;
-      (*info->print_address_func) (info->target, info);
-      break;
-
-    case 'l':
-    case 'L':
-      {
-	int need_comma, amask, smask;
-
-	need_comma = 0;
-
-	l = GET_OP (l, IMM6);
-
-	amask = (l >> 3) & 7;
-
-	if (amask > 0 && amask < 5)
-	  {
-	    infprintf (is, "%s", mips_gpr_names[4]);
-	    if (amask > 1)
-	      infprintf (is, "-%s", mips_gpr_names[amask + 3]);
-	    need_comma = 1;
-	  }
-
-	smask = (l >> 1) & 3;
-	if (smask == 3)
-	  {
-	    infprintf (is, "%s??", need_comma ? "," : "");
-	    need_comma = 1;
-	  }
-	else if (smask > 0)
-	  {
-	    infprintf (is, "%s%s", need_comma ? "," : "", mips_gpr_names[16]);
-	    if (smask > 1)
-	      infprintf (is, "-%s", mips_gpr_names[smask + 15]);
-	    need_comma = 1;
-	  }
-
-	if (l & 1)
-	  {
-	    infprintf (is, "%s%s", need_comma ? "," : "", mips_gpr_names[31]);
-	    need_comma = 1;
-	  }
-
-	if (amask == 5 || amask == 6)
-	  {
-	    infprintf (is, "%s$f0", need_comma ? "," : "");
-	    if (amask == 6)
-	      infprintf (is, "-$f1");
-	  }
-      }
-      break;
-
-    case 'm':
-    case 'M':
-      /* MIPS16e save/restore.  */
-      {
-      int need_comma = 0;
-      int amask, args, statics;
-      int nsreg, smask;
-      int framesz;
-      int i, j;
-
-      l = l & 0x7f;
-      if (use_extend)
-        l |= extend << 16;
-
-      amask = (l >> 16) & 0xf;
-      if (amask == MIPS16_ALL_ARGS)
-        {
-          args = 4;
-          statics = 0;
-        }
-      else if (amask == MIPS16_ALL_STATICS)
-        {
-          args = 0;
-          statics = 4;
-        }
-      else
-        {
-          args = amask >> 2;
-          statics = amask & 3;
-        }
-
-      if (args > 0) {
-	  infprintf (is, "%s", mips_gpr_names[4]);
-          if (args > 1)
-	    infprintf (is, "-%s", mips_gpr_names[4 + args - 1]);
-          need_comma = 1;
-      }
-
-      framesz = (((l >> 16) & 0xf0) | (l & 0x0f)) * 8;
-      if (framesz == 0 && !use_extend)
-        framesz = 128;
-
-      infprintf (is, "%s%d", need_comma ? "," : "", framesz);
-
-      if (l & 0x40)                   /* $ra */
-	infprintf (is, ",%s", mips_gpr_names[31]);
-
-      nsreg = (l >> 24) & 0x7;
-      smask = 0;
-      if (l & 0x20)                   /* $s0 */
-        smask |= 1 << 0;
-      if (l & 0x10)                   /* $s1 */
-        smask |= 1 << 1;
-      if (nsreg > 0)                  /* $s2-$s8 */
-        smask |= ((1 << nsreg) - 1) << 2;
-
-      /* Find first set static reg bit.  */
-      for (i = 0; i < 9; i++)
-        {
-          if (smask & (1 << i))
-            {
-	      infprintf (is, ",%s", mips_gpr_names[i == 8 ? 30 : (16 + i)]);
-              /* Skip over string of set bits.  */
-              for (j = i; smask & (2 << j); j++)
-                continue;
-              if (j > i)
-		infprintf (is, "-%s", mips_gpr_names[j == 8 ? 30 : (16 + j)]);
-              i = j + 1;
-            }
-        }
-
-      /* Statics $ax - $a3.  */
-      if (statics == 1)
-	infprintf (is, ",%s", mips_gpr_names[7]);
-      else if (statics > 0) 
-	infprintf (is, ",%s-%s",
-		   mips_gpr_names[7 - statics + 1],
-		   mips_gpr_names[7]);
-      }
-      break;
-
-    default:
-      /* xgettext:c-format */
-      infprintf (is,
-		 _("# internal disassembler error, "
-		   "unrecognised modifier (%c)"),
-		 type);
-      abort ();
     }
 }
 
@@ -2086,6 +1600,7 @@ print_insn_mips16 (bfd_vma memaddr, struct disassemble_info *info)
   bfd_boolean use_extend;
   int extend = 0;
   const struct mips_opcode *op, *opend;
+  struct mips_print_arg_state state;
   void *is = info->stream;
 
   info->bytes_per_chunk = 2;
@@ -2096,6 +1611,8 @@ print_insn_mips16 (bfd_vma memaddr, struct disassemble_info *info)
   info->target = 0;
   info->target2 = 0;
 
+#define GET_OP(insn, field) \
+  (((insn) >> MIPS16OP_SH_##field) & MIPS16OP_MASK_##field)
   /* Decode PLT entry's GOT slot address word.  */
   if (is_mips16_plt_tail (info, memaddr))
     {
@@ -2176,7 +1693,7 @@ print_insn_mips16 (bfd_vma memaddr, struct disassemble_info *info)
 	{
 	  const char *s;
 
-	  if (strchr (op->args, 'a') != NULL)
+	  if (op->args[0] == 'a' || op->args[0] == 'i')
 	    {
 	      if (use_extend)
 		{
@@ -2206,6 +1723,7 @@ print_insn_mips16 (bfd_vma memaddr, struct disassemble_info *info)
 	  if (op->args[0] != '\0')
 	    infprintf (is, "\t");
 
+	  init_print_arg_state (&state);
 	  for (s = op->args; *s != '\0'; s++)
 	    {
 	      if (*s == ','
@@ -2224,8 +1742,8 @@ print_insn_mips16 (bfd_vma memaddr, struct disassemble_info *info)
 		  ++s;
 		  continue;
 		}
-	      print_mips16_insn_arg (*s, op, insn, use_extend, extend, memaddr,
-				     info);
+	      print_mips16_insn_arg (info, &state, op, *s, memaddr, insn,
+				     use_extend, extend, s[1] == '(');
 	    }
 
 	  /* Figure out branch instruction type and delay slot information.  */
@@ -2245,7 +1763,6 @@ print_insn_mips16 (bfd_vma memaddr, struct disassemble_info *info)
 	  return length;
 	}
     }
-#undef GET_OP_S
 #undef GET_OP
 
   if (use_extend)
@@ -2263,19 +1780,12 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 {
   const fprintf_ftype infprintf = info->fprintf_func;
   const struct mips_opcode *op, *opend;
-  unsigned int lsb, msbd, msb;
   void *is = info->stream;
-  unsigned int regno;
   bfd_byte buffer[2];
-  int lastregno = 0;
-  int higher;
-  int length;
+  unsigned int higher;
+  unsigned int length;
   int status;
-  int delta;
-  int immed;
-  int insn;
-
-  lsb = 0;
+  unsigned int insn;
 
   info->bytes_per_chunk = 2;
   info->display_endian = info->endian;
@@ -2359,11 +1869,6 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 
   /* FIXME: Should probably use a hash table on the major opcode here.  */
 
-#define GET_OP(insn, field) \
-  (((insn) >> MICROMIPSOP_SH_##field) & MICROMIPSOP_MASK_##field)
-#define GET_OP_S(insn, field) \
-  ((GET_OP (insn, field) ^ ((MICROMIPSOP_MASK_##field >> 1) + 1)) \
-   - ((MICROMIPSOP_MASK_##field >> 1) + 1))
   opend = micromips_opcodes + bfd_micromips_num_opcodes;
   for (op = micromips_opcodes; op < opend; op++)
     {
@@ -2373,585 +1878,13 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 	  && ((length == 2 && (op->mask & 0xffff0000) == 0)
 	      || (length == 4 && (op->mask & 0xffff0000) != 0)))
 	{
-	  const char *s;
-
 	  infprintf (is, "%s", op->name);
-	  if (op->args[0] != '\0')
-	    infprintf (is, "\t");
 
-	  for (s = op->args; *s != '\0'; s++)
+	  if (op->args[0])
 	    {
-	      switch (*s)
-		{
-		case ',':
-		case '(':
-		case ')':
-		  infprintf (is, "%c", *s);
-		  break;
-
-		case '.':
-		  infprintf (is, "%d", GET_OP_S (insn, OFFSET10));
-		  break;
-
-		case '1':
-		  infprintf (is, "0x%x", GET_OP (insn, STYPE));
-		  break;
-
-		case '2':
-		  infprintf (is, "0x%x", GET_OP (insn, BP));
-		  break;
-
-		case '3':
-		  infprintf (is, "0x%x", GET_OP (insn, SA3));
-		  break;
-
-		case '4':
-		  infprintf (is, "0x%x", GET_OP (insn, SA4));
-		  break;
-
-		case '5':
-		  infprintf (is, "0x%x", GET_OP (insn, IMM8));
-		  break;
-
-		case '6':
-		  infprintf (is, "0x%x", GET_OP (insn, RS));
-		  break;
-
-		case '7':
-		  infprintf (is, "$ac%d", GET_OP (insn, DSPACC));
-		  break;
-
-		case '8':
-		  infprintf (is, "0x%x", GET_OP (insn, WRDSP));
-		  break;
-
-		case '0': /* DSP 6-bit signed immediate in bit 16.  */
-		  delta = (GET_OP (insn, DSPSFT) ^ 0x20) - 0x20;
-		  infprintf (is, "%d", delta);
-		  break;
-
-		case '<':
-		  infprintf (is, "0x%x", GET_OP (insn, SHAMT));
-		  break;
-
-		case '\\':
-		  infprintf (is, "0x%x", GET_OP (insn, 3BITPOS));
-		  break;
-
-		case '^':
-		  infprintf (is, "0x%x", GET_OP (insn, RD));
-		  break;
-
-		case '|':
-		  infprintf (is, "0x%x", GET_OP (insn, TRAP));
-		  break;
-
-		case '~':
-		  infprintf (is, "%d", GET_OP_S (insn, OFFSET12));
-		  break;
-
-		case 'a':
-		  if (strcmp (op->name, "jalx") == 0)
-		    info->target = (((memaddr + 4) & ~(bfd_vma) 0x0fffffff)
-				    | (GET_OP (insn, TARGET) << 2));
-		  else
-		    info->target = (((memaddr + 4) & ~(bfd_vma) 0x07ffffff)
-				    | (GET_OP (insn, TARGET) << 1));
-		  /* For gdb disassembler, force odd address on jalx.  */
-		  if (info->flavour == bfd_target_unknown_flavour
-		      && strcmp (op->name, "jalx") == 0)
-		    info->target |= 1;
-		  (*info->print_address_func) (info->target, info);
-		  break;
-
-		case 'b':
-		case 'r':
-		case 's':
-		case 'v':
-		  infprintf (is, "%s", mips_gpr_names[GET_OP (insn, RS)]);
-		  break;
-
-		case 'c':
-		  infprintf (is, "0x%x", GET_OP (insn, CODE));
-		  break;
-
-		case 'd':
-		  infprintf (is, "%s", mips_gpr_names[GET_OP (insn, RD)]);
-		  break;
-
-		case 'h':
-		  infprintf (is, "0x%x", GET_OP (insn, PREFX));
-		  break;
-
-		case 'i':
-		case 'u':
-		  infprintf (is, "0x%x", GET_OP (insn, IMMEDIATE));
-		  break;
-
-		case 'j': /* Same as i, but sign-extended.  */
-		case 'o':
-		  infprintf (is, "%d", GET_OP_S (insn, DELTA));
-		  break;
-
-		case 'k':
-		  infprintf (is, "0x%x", GET_OP (insn, CACHE));
-		  break;
-
-		case 'n':
-		  {
-		    int s_reg_encode;
-
-		    immed = GET_OP (insn, RT);
-		    s_reg_encode = immed & 0xf;
-		    if (s_reg_encode != 0)
-		      {
-			if (s_reg_encode == 1)
-			  infprintf (is, "%s", mips_gpr_names[16]);
-			else if (s_reg_encode < 9)
-			  infprintf (is, "%s-%s",
-				   mips_gpr_names[16],
-				   mips_gpr_names[15 + s_reg_encode]);
-			else if (s_reg_encode == 9)
-			  infprintf (is, "%s-%s,%s",
-				   mips_gpr_names[16],
-				   mips_gpr_names[23],
-				   mips_gpr_names[30]);
-			else
-			  infprintf (is, "UNKNOWN");
-		      }
-
-		    if (immed & 0x10) /* For ra.  */
-		      {
-			if (s_reg_encode == 0)
-			  infprintf (is, "%s", mips_gpr_names[31]);
-			else
-			  infprintf (is, ",%s", mips_gpr_names[31]);
-		      }
-		    break;
-		  }
-
-		case 'p':
-		  /* Sign-extend the displacement.  */
-		  delta = GET_OP_S (insn, DELTA);
-		  info->target = (delta << 1) + memaddr + length;
-		  (*info->print_address_func) (info->target, info);
-		  break;
-
-		case 'q':
-		  infprintf (is, "0x%x", GET_OP (insn, CODE2));
-		  break;
-
-		case 't':
-		case 'w':
-		  infprintf (is, "%s", mips_gpr_names[GET_OP (insn, RT)]);
-		  break;
-
-		case 'y':
-		  infprintf (is, "%s", mips_gpr_names[GET_OP (insn, RS3)]);
-		  break;
-
-		case 'z':
-		  infprintf (is, "%s", mips_gpr_names[0]);
-		  break;
-
-		case '@': /* DSP 10-bit signed immediate in bit 16.  */
-		  delta = (GET_OP (insn, IMM10) ^ 0x200) - 0x200;
-		  infprintf (is, "%d", delta);
-		  break;
-
-		case 'B':
-		  infprintf (is, "0x%x", GET_OP (insn, CODE10));
-		  break;
-
-		case 'C':
-		  infprintf (is, "0x%x", GET_OP (insn, COPZ));
-		  break;
-
-		case 'D':
-		  infprintf (is, "%s", mips_fpr_names[GET_OP (insn, FD)]);
-		  break;
-
-		case 'E':
-		  /* Coprocessor register for lwcN instructions, et al.
-
-		    Note that there is no load/store cp0 instructions, and
-		    that FPU (cp1) instructions disassemble this field using
-		    'T' format.  Therefore, until we gain understanding of
-		    cp2 register names, we can simply print the register
-		    numbers.  */
-		  infprintf (is, "$%d", GET_OP (insn, RT));
-		  break;
-
-		case 'G':
-		  /* Coprocessor register for mtcN instructions, et al.  Note
-		     that FPU (cp1) instructions disassemble this field using
-		     'S' format.  Therefore, we only need to worry about cp0,
-		     cp2, and cp3.
-		     The microMIPS encoding does not have a coprocessor
-		     identifier field as such, so we must work out the
-		     coprocessor number by looking at the opcode.  */
-		  switch (insn
-			  & ~((MICROMIPSOP_MASK_RT << MICROMIPSOP_SH_RT)
-			      | (MICROMIPSOP_MASK_RS << MICROMIPSOP_SH_RS)))
-		    {
-		    case 0x000000fc:				/* mfc0  */
-		    case 0x000002fc:				/* mtc0  */
-		    case 0x000004fc:				/* mfgc0  */
-		    case 0x000006fc:				/* mtgc0  */
-		    case 0x580000fc:				/* dmfc0 */
-		    case 0x580002fc:				/* dmtc0 */
-		    case 0x580000e7:				/* dmfgc0 */
-		    case 0x580002e7:				/* dmtgc0 */
-		      infprintf (is, "%s", mips_cp0_names[GET_OP (insn, RS)]);
-		      break;
-		    default:
-		      infprintf (is, "$%d", GET_OP (insn, RS));
-		      break;
-		    }
-		  break;
-
-		case 'H':
-		  infprintf (is, "%d", GET_OP (insn, SEL));
-		  break;
-
-		case 'K':
-		  infprintf (is, "%s", mips_hwr_names[GET_OP (insn, RS)]);
-		  break;
-
-		case 'M':
-		  infprintf (is, "$fcc%d", GET_OP (insn, CCC));
-		  break;
-
-		case 'N':
-		  infprintf (is,
-			   (op->pinfo & (FP_D | FP_S)) != 0
-			   ? "$fcc%d" : "$cc%d",
-			   GET_OP (insn, BCC));
-		  break;
-
-		case 'R':
-		  infprintf (is, "%s", mips_fpr_names[GET_OP (insn, FR)]);
-		  break;
-
-		case 'S':
-		case 'V':
-		  infprintf (is, "%s", mips_fpr_names[GET_OP (insn, FS)]);
-		  break;
-
-		case 'T':
-		  infprintf (is, "%s", mips_fpr_names[GET_OP (insn, FT)]);
-		  break;
-
-		case '+':
-		  /* Extension character; switch for second char.  */
-		  s++;
-		  switch (*s)
-		    {
-		    case 'A':
-		      lsb = GET_OP (insn, EXTLSB);
-		      infprintf (is, "0x%x", lsb);
-		      break;
-
-		    case 'B':
-		      msb = GET_OP (insn, INSMSB);
-		      infprintf (is, "0x%x", msb - lsb + 1);
-		      break;
-
-		    case 'C':
-		    case 'H':
-		      msbd = GET_OP (insn, EXTMSBD);
-		      infprintf (is, "0x%x", msbd + 1);
-		      break;
-
-		    case 'D':
-		      {
-			const struct mips_cp0sel_name *n;
-			unsigned int cp0reg, sel;
-
-			cp0reg = GET_OP (insn, RS);
-			sel = GET_OP (insn, SEL);
-
-			/* CP0 register including 'sel' code for mtcN
-			   (et al.), to be printed textually if known.
-			   If not known, print both CP0 register name and
-			   sel numerically since CP0 register with sel 0 may
-			   have a name unrelated to register being printed.  */
-			n = lookup_mips_cp0sel_name (mips_cp0sel_names,
-						     mips_cp0sel_names_len,
-						     cp0reg, sel);
-			if (n != NULL)
-			  infprintf (is, "%s", n->name);
-			else
-			  infprintf (is, "$%d,%d", cp0reg, sel);
-			break;
-		      }
-
-		    case 'E':
-		      lsb = GET_OP (insn, EXTLSB) + 32;
-		      infprintf (is, "0x%x", lsb);
-		      break;
-
-		    case 'F':
-		      msb = GET_OP (insn, INSMSB) + 32;
-		      infprintf (is, "0x%x", msb - lsb + 1);
-		      break;
-
-		    case 'G':
-		      msbd = GET_OP (insn, EXTMSBD) + 32;
-		      infprintf (is, "0x%x", msbd + 1);
-		      break;
-
-		    case 'j':   /* 9-bit signed offset in bit 0. */
-		      delta = GET_OP_S (insn, EVAOFFSET);
-		      infprintf (is, "%d", delta);
-		      break;
-
-		    default:
-		      /* xgettext:c-format */
-		      infprintf (is,
-			       _("# internal disassembler error, "
-				 "unrecognized modifier (+%c)"),
-			       *s);
-		      abort ();
-		    }
-		  break;
-
-		case 'm':
-		  /* Extension character; switch for second char.  */
-		  s++;
-		  switch (*s)
-		    {
-		    case 'a':	/* global pointer.  */
-		      infprintf (is, "%s", mips_gpr_names[28]);
-		      break;
-
-		    case 'b':
-		      regno = micromips_to_32_reg_b_map[GET_OP (insn, MB)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'c':
-		      regno = micromips_to_32_reg_c_map[GET_OP (insn, MC)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'd':
-		      regno = micromips_to_32_reg_d_map[GET_OP (insn, MD)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'e':
-		      regno = micromips_to_32_reg_e_map[GET_OP (insn, ME)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'f':
-		      /* Save lastregno for "mt" to print out later.  */
-		      lastregno = micromips_to_32_reg_f_map[GET_OP (insn, MF)];
-		      infprintf (is, "%s", mips_gpr_names[lastregno]);
-		      break;
-
-		    case 'g':
-		      regno = micromips_to_32_reg_g_map[GET_OP (insn, MG)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'h':
-		      regno = micromips_to_32_reg_h_map[GET_OP (insn, MH)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'i':
-		      regno = micromips_to_32_reg_i_map[GET_OP (insn, MI)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'j':
-		      infprintf (is, "%s", mips_gpr_names[GET_OP (insn, MJ)]);
-		      break;
-
-		    case 'l':
-		      regno = micromips_to_32_reg_l_map[GET_OP (insn, ML)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'm':
-		      regno = micromips_to_32_reg_m_map[GET_OP (insn, MM)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'n':
-		      regno = micromips_to_32_reg_n_map[GET_OP (insn, MN)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'p':
-		      /* Save lastregno for "mt" to print out later.  */
-		      lastregno = GET_OP (insn, MP);
-		      infprintf (is, "%s", mips_gpr_names[lastregno]);
-		      break;
-
-		    case 'q':
-		      regno = micromips_to_32_reg_q_map[GET_OP (insn, MQ)];
-		      infprintf (is, "%s", mips_gpr_names[regno]);
-		      break;
-
-		    case 'r':	/* program counter.  */
-		      infprintf (is, "$pc");
-		      break;
-
-		    case 's':	/* stack pointer.  */
-		      lastregno = 29;
-		      infprintf (is, "%s", mips_gpr_names[29]);
-		      break;
-
-		    case 't':
-		      infprintf (is, "%s", mips_gpr_names[lastregno]);
-		      break;
-
-		    case 'z':	/* $0.  */
-		      infprintf (is, "%s", mips_gpr_names[0]);
-		      break;
-
-		    case 'A':
-		      /* Sign-extend the immediate.  */
-		      immed = GET_OP_S (insn, IMMA) << 2;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'B':
-		      immed = micromips_imm_b_map[GET_OP (insn, IMMB)];
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'C':
-		      immed = micromips_imm_c_map[GET_OP (insn, IMMC)];
-		      infprintf (is, "0x%x", immed);
-		      break;
-
-		    case 'D':
-		      /* Sign-extend the displacement.  */
-		      delta = GET_OP_S (insn, IMMD);
-		      info->target = (delta << 1) + memaddr + length;
-		      (*info->print_address_func) (info->target, info);
-		      break;
-
-		    case 'E':
-		      /* Sign-extend the displacement.  */
-		      delta = GET_OP_S (insn, IMME);
-		      info->target = (delta << 1) + memaddr + length;
-		      (*info->print_address_func) (info->target, info);
-		      break;
-
-		    case 'F':
-		      immed = GET_OP (insn, IMMF);
-		      infprintf (is, "0x%x", immed);
-		      break;
-
-		    case 'G':
-		      immed = (insn >> MICROMIPSOP_SH_IMMG) + 1;
-		      immed = (immed & MICROMIPSOP_MASK_IMMG) - 1;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'H':
-		      immed = GET_OP (insn, IMMH) << 1;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'I':
-		      immed = (insn >> MICROMIPSOP_SH_IMMI) + 1;
-		      immed = (immed & MICROMIPSOP_MASK_IMMI) - 1;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'J':
-		      immed = GET_OP (insn, IMMJ) << 2;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'L':
-		      immed = GET_OP (insn, IMML);
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'M':
-		      immed = (insn >> MICROMIPSOP_SH_IMMM) - 1;
-		      immed = (immed & MICROMIPSOP_MASK_IMMM) + 1;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'N':
-		      immed = GET_OP (insn, IMMN);
-		      if (immed == 0)
-			infprintf (is, "%s,%s",
-				 mips_gpr_names[16],
-				 mips_gpr_names[31]);
-		      else
-			infprintf (is, "%s-%s,%s",
-				 mips_gpr_names[16],
-				 mips_gpr_names[16 + immed],
-				 mips_gpr_names[31]);
-		      break;
-
-		    case 'O':
-		      immed = GET_OP (insn, IMMO);
-		      infprintf (is, "0x%x", immed);
-		      break;
-
-		    case 'P':
-		      immed = GET_OP (insn, IMMP) << 2;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'Q':
-		      /* Sign-extend the immediate.  */
-		      immed = GET_OP_S (insn, IMMQ) << 2;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'U':
-		      immed = GET_OP (insn, IMMU) << 2;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'W':
-		      immed = GET_OP (insn, IMMW) << 2;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'X':
-		      /* Sign-extend the immediate.  */
-		      immed = GET_OP_S (insn, IMMX);
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    case 'Y':
-		      /* Sign-extend the immediate.  */
-		      immed = GET_OP_S (insn, IMMY) << 2;
-		      if ((unsigned int) (immed + 8) < 16)
-			immed ^= 0x400;
-		      infprintf (is, "%d", immed);
-		      break;
-
-		    default:
-		      /* xgettext:c-format */
-		      infprintf (is,
-			       _("# internal disassembler error, "
-				 "unrecognized modifier (m%c)"),
-			       *s);
-		      abort ();
-		    }
-		  break;
-
-		default:
-		  /* xgettext:c-format */
-		  infprintf (is,
-			   _("# internal disassembler error, "
-			     "unrecognized modifier (%c)"),
-			   *s);
-		  abort ();
-		}
+	      infprintf (is, "\t");
+	      print_insn_args (info, op, decode_micromips_operand, insn,
+			       memaddr + length + 1);
 	    }
 
 	  /* Figure out instruction type and branch delay information.  */
@@ -2981,8 +1914,6 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 	  return length;
 	}
     }
-#undef GET_OP_S
-#undef GET_OP
 
   infprintf (is, "0x%x", insn);
   info->insn_type = dis_noninsn;

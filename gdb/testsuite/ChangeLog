@@ -1,3 +1,68 @@
+2013-07-16  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb.base/printcmds.exp (test_printf): Add tests for format
+	strings with missing format specifier.
+
+2013-07-16  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.ada/info_types.exp: Use standard_testfile.
+
+2013-07-16  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.mi/mi-basics.exp: Use standard_output_file.
+	(test_dir_specification, test_cwd_specification)
+	(test_path_specification): Use testsubdir, not subdir and objdir.
+
+2013-07-16  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.trace/mi-traceframe-changed.exp: Don't use objdir.
+
+2013-07-09  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.ada/small_reg_param.exp: Accept optional entry value
+	for parameter "w".
+
+2013-07-09  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.ada/small_reg_param.exp: Remove trailing space.
+
+2013-07-09  Doug Evans  <dje@google.com>
+
+	* gdb.base/default.exp: Update expected output of "show print array"
+	and "show print pretty".
+
+2013-07-08  Andreas Arnez  <arnez@linux.vnet.ibm.com>
+
+	* gdb.threads/wp-replication.exp: Stop counting available hardware
+	watchpoints after NR_THREADS iterations.
+
+2013-07-08  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb.python/py-explore.exp: Add $gdb_prompt to test regexp.
+
+2013-07-07  Yao Qi  <yao@codesourcery.com>
+
+	* boards/native-gdbserver.exp: Move invoke of
+	process_multilib_options to gdbserver-base.exp.
+	Move set_board_info 'compiler', 'gdb,noinferiorio',
+	'gdb,nofileio', 'gdb_server_prog' and 'gdb,predefined_tsv' to
+	gdbserver-base.exp.
+	Move proc ${board}_download, ${board}_upload and
+	${board}_file to gdbserver-base.exp.
+	* boards/native-extended-gdbserver.exp: Likewise.
+	* boards/native-stdio-gdbserver.exp: Likewise.
+	* boards/gdbserver-base.exp: New file.
+
+2013-07-05  Luis Machado  <lgustavo@codesourcery.com>
+
+	* gdb.base/dump.exp: Remove arch-specific tests and do a
+	generic data address check to set is64bitonly correctly.
+
+2013-07-05  Luis Machado  <lgustavo@codesourcery.com>
+
+	* gdb.mi/gdb2549.exp (register_tests): Expect any decimal for
+	the register number instead of expecting only 0.
+
 2013-07-05  Will Newton  <will.newton@linaro.org>
 
 	* gdb.base/gnu-ifunc-lib.c: Use %function instead of @function

@@ -1,3 +1,155 @@
+2013-07-16  Doug Evans  <dje@google.com>
+
+	* nto-tdep.c (nto_relocate_section_addresses): Update,
+	target_section.bfd deleted.
+	* ppc64-tdep.c (ppc64_convert_from_func_ptr_addr): Ditto.
+	* s390-tdep.c (s390_load): Ditto.
+	* solib-aix.c (solib_aix_relocate_section_addresses): Ditto.
+
+2013-07-16  Andrew Burgess  <aburgess@broadcom.com>
+
+	* common/format.c (parse_format_string): Add checks for NULL
+	character before calling strchr.
+
+2013-07-16  Doug Evans  <dje@google.com>
+
+	* solist.h (target_so_ops.find_and_open_solib): Clarify usage of
+	temp_pathname argument.
+	* nto-tdep.c (nto_find_and_open_solib): Fix setting of temp_pathname
+	when opening the file fails.
+
+	* target.h (struct target_section): Delete member bfd.
+	All users updated to use the_bfd_section->owner instead.
+	* exec.c (add_to_section_table): Assert bfd is expected value.
+	Remove initialization of target_section.bfd.
+	(remove_target_sections): Update.
+	(section_table_available_memory): Update.
+	(section_table_xfer_memory_partial): Update.
+	(print_section_info): Update.
+	(exec_set_section_address): Update.
+	* record-full.c (record_full_core_xfer_partial): Update.
+	* solib-svr4.c (svr4_relocate_section_addresses): Update.
+	* solib-target.c (solib_target_relocate_section_addresses): Update.
+	* symfile.c (build_section_addr_info_from_section_table): Update.
+	* target.c (memory_xfer_live_readonly_partial): Update.
+	(memory_xfer_partial_1): Update.
+
+2013-07-15  Edjunior Barbosa Machado  <emachado@linux.vnet.ibm.com>
+
+	* ppc-linux-nat.c: Since the new PowerPC specific ptrace interface is
+	now available for embedded (BookE) and server (BookS) processors,
+	correct mentions of 'booke' and adjust comments accordingly in order to
+	avoid confusion. Rename struct 'booke_debug_info' to 'hwdebug_info'.
+	(have_ptrace_booke_interface): Rename function and variable
+	'have_ptrace_booke_interface' to 'have_ptrace_hwdebug_interface'.
+	Rename struct 'booke_debug_info' to 'hwdebug_info'. Update all uses.
+	(booke_cmp_hw_point): Rename function 'booke_cmp_hw_point' to
+	'hwdebug_point_cmp'. Update all uses.
+	(booke_find_thread_points_by_tid): Rename function
+	'booke_find_thread_points_by_tid' to
+	'hwdebug_find_thread_points_by_tid'. Update all uses.
+	(booke_insert_point): Rename function 'booke_insert_point' to
+	'hwdebug_insert_point'. Update all uses.
+	(booke_remove_point): Rename function 'booke_remove_point' to
+	'hwdebug_remove_point'. Update all uses.
+
+2013-07-15  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips-tdep.c (mips_gdbarch_init): Replace hardcoded magic
+	numbers with enum values.
+
+2013-07-15  Ali Anwar  <ali_anwar@codesourcery.com>
+
+	PR threads/13217
+	* thread.c (thread_apply_all_command): Check for valid threads
+	and thread count.
+	(thread_array_cleanup): New struct.
+	(set_thread_refcount): New function.
+
+2013-07-11  Andrew Burgess  <aburgess@broadcom.com>
+
+	* infcmd.c (default_print_one_register_info): Reuse function
+	print_hex_chars.
+
+2013-07-10  Tom Tromey  <tromey@redhat.com>
+
+	* Makefile.in (GDB_WARN_CFLAGS_NO_DEFS, ADA_EXP_C): New macros.
+	(ada-exp.o): New target.
+
+2013-07-10  Sergio Durigan Junior  <sergiodj@redhat.com>
+
+	* mt-tdep.c (mt_registers_info): Call
+	get_no_prettyformat_print_options instead of
+	get_raw_print_options (regression by last patch from Doug
+	Evans).
+
+2013-07-09  Pedro Alves  <palves@redhat.com>
+
+	Checked in by Joel Brobecker  <brobecker@adacore.com>.
+	* ada-lang.c (coerce_unspec_val_to_type): Use
+	value_optimized_out_const.
+	* value.c (value_optimized_out_const): New function.
+	* value.h (value_optimized_out_const): New declaration.
+
+2013-07-09  Doug Evans  <dje@google.com>
+
+	* defs.h (enum val_prettyformat): Renamed from val_prettyprint.
+	Enum values rename as well.  All uses updated.
+	* valprint.h (value_print_options): Rename member pretty to
+	pretty format.  Rename member prettyprint_arrays to
+	prettyformat_arrays.  Rename member prettyprint_structs to
+	prettyformat_structs.  All uses updated.
+	(get_no_prettyformat_print_options): Renamed from
+	get_raw_print_options.
+	* valprint.c (get_no_prettyformat_print_options): Renamed from
+	get_raw_print_options.  All callers updated.
+	(show_prettyformat_structs): Renamed from show_prettyprint_structs.
+	All callers updated.
+	(show_prettyformat_arrays): Renamed from show_prettyprint_arrays.
+	All callers updated.
+	(_initialize_valprint): Improve help text for "set print pretty" and
+	"set print arrays".
+
+2013-07-09  Andrew Burgess  <aburgess@broadcom.com>
+
+	* value.c (value_bits_valid): Revert previous change, and change
+	by Pedro on 2013-07-04, due to regressions in
+	gdb.dwarf2/implptr.exp and gdb.dwarf2/pieces.exp.
+
+2013-07-08  Andrew Burgess  <aburgess@broadcom.com>
+            Pedro Alves  <palves@redhat.com>
+
+	* value.c (value_bits_valid): If the value is not lval_computed
+	or has no check validity handler then the answer is the
+	optimized_out flag, otherwise defer to the handler.
+
+2013-07-06  Eli Zaretskii  <eliz@gnu.org>
+
+	* top.c (print_gdb_configuration): Explain in output of
+	--configuration what does "relocatable" mean.
+
+	* main.c (print_gdb_help): Regroup options in the --help text.
+	See http://sourceware.org/ml/gdb-patches/2013-04/msg00362.html for
+	the relevant discussions.
+
+2013-07-06  Yao Qi  <yao@codesourcery.com>
+
+	* breakpoint.h (struct breakpoint_ops) <create_breakpoints_sal>:
+	Remove parameter 'lsal'.
+	* breakpoint.c (create_breakpoint): Move local variable 'lsal'
+	to inner block.  Caller update.
+	(base_breakpoint_create_breakpoints_sal): Update.
+	(bkpt_create_breakpoints_sal): Likewise.
+	(tracepoint_create_breakpoints_sal): Likewise.
+	(strace_marker_create_breakpoints_sal): Get 'lsal' from the
+	element 0 of vector 'canonical->sals'.
+
+2013-07-05  Luis Machado  <lgustavo@codesourcery.com>
+
+	* rs6000-tdep.c (rs6000_stab_reg_to_regnum): Return the real
+	register number instead of the pseudo register one.
+	(rs6000_dwarf2_reg_to_regnum): Likewise.
+
 2013-07-04  Pedro Alves  <palves@redhat.com>
 
 	* findvar.c (value_of_register): Use allocate_optimized_out_value

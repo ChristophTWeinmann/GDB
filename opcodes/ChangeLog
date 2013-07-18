@@ -1,3 +1,129 @@
+2013-07-17  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-formats.h (MAPPED_INT, MAPPED_REG, REG_PAIR): Add
+	ATTRIBUTE_UNUSED.
+
+2013-07-14  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* Makefile.am (mips-opc.lo, micromips-opc.lo, mips16-opc.lo): Remove
+	special rules.
+	* Makefile.in: Regenerate.
+	* mips-opc.c, micromips-opc.c, mips16-opc.c: Explicitly initialize
+	all fields.  Reformat.
+
+2013-07-14  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips16-opc.c: Include mips-formats.h.
+	(reg_0_map, reg_29_map, reg_31_map, reg_m16_map, reg32r_map): New
+	static arrays.
+	(decode_mips16_operand): New function.
+	* mips-dis.c (mips16_to_32_reg_map, mips16_reg_names): Delete.
+	(print_insn_arg): Handle OP_ENTRY_EXIT list.
+	Abort for OP_SAVE_RESTORE_LIST.
+	(print_mips16_insn_arg): Change interface.  Use mips_operand
+	structures.  Delete GET_OP_S.  Move GET_OP definition to...
+	(print_insn_mips16): ...here.  Call init_print_arg_state.
+	Update the call to print_mips16_insn_arg.
+
+2013-07-14  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-formats.h: New file.
+	* mips-opc.c: Include mips-formats.h.
+	(reg_0_map): New static array.
+	(decode_mips_operand): New function.
+	* micromips-opc.c: Remove <stdio.h> include.  Include mips-formats.h.
+	(reg_0_map, reg_28_map, reg_29_map, reg_31_map, reg_m16_map)
+	(reg_mn_map, reg_q_map, reg_h_map1, reg_h_map2, int_b_map)
+	(int_c_map): New static arrays.
+	(decode_micromips_operand): New function.
+	* mips-dis.c (micromips_to_32_reg_b_map, micromips_to_32_reg_c_map)
+	(micromips_to_32_reg_d_map, micromips_to_32_reg_e_map)
+	(micromips_to_32_reg_f_map, micromips_to_32_reg_g_map)
+	(micromips_to_32_reg_h_map1, micromips_to_32_reg_h_map2)
+	(micromips_to_32_reg_l_map, micromips_to_32_reg_m_map)
+	(micromips_to_32_reg_n_map, micromips_to_32_reg_q_map)
+	(micromips_imm_b_map, micromips_imm_c_map): Delete.
+	(print_reg): New function.
+	(mips_print_arg_state): New structure.
+	(init_print_arg_state, print_insn_arg): New functions.
+	(print_insn_args): Change interface and use mips_operand structures.
+	Delete GET_OP_S.  Move GET_OP definition to...
+	(print_insn_mips): ...here.  Update the call to print_insn_args.
+	(print_insn_micromips): Use print_insn_args.
+
+2013-07-14  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips16-opc.c (mips16_opcodes): Use "I" for immediate operands
+	in macros.
+
+2013-07-14  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Use "S,T" rather than "V,T" for
+	ADDA.S, MULA.S and SUBA.S.
+
+2013-07-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/13572
+	* i386-opc.tbl: Replace Xmmword with Qword on cvttps2pi.
+	* i386-tbl.h: Regenerated.
+
+2013-07-07  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Remove o(b) macros.  Move LD
+	and SD A(B) macros up.
+	* micromips-opc.c (micromips_opcodes): Likewise.
+
+2013-07-07  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips16-opc.c: Add entries for argumentless "entry" and "exit"
+	instructions.
+
+2013-07-07  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Use "Q" for the INSN_5400
+	MDMX-like instructions.
+	* mips-dis.c (print_insn_arg): Use "$f" rather than "$v" when
+	printing "Q" operands for INSN_5400 instructions.
+
+2013-07-07  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Use "+s" for "cins32" and
+	"+S" for "cins".
+	* mips-dis.c (print_mips_arg): Update "+s" and "+S" comments.
+	Combine cases.
+
+2013-07-07  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Use "+i" rather than "a" for
+	"jalx".
+	* mips16-opc.c (mips16_opcodes): Likewise.
+	* micromips-opc.c (micromips_opcodes): Likewise.
+	* mips-dis.c (print_insn_args, print_mips16_insn_arg)
+	(print_insn_mips16): Handle "+i".
+	(print_insn_micromips): Likewise.  Conditionally preserve the
+	ISA bit for "a" but not for "+i".
+
+2013-07-07  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* micromips-opc.c (WR_mhi): Rename to..
+	(WR_mh): ...this.
+	(micromips_opcodes): Update "movep" entry accordingly.  Replace
+	"mh,mi" with "mh".
+	* mips-dis.c (micromips_to_32_reg_h_map): Rename to...
+	(micromips_to_32_reg_h_map1): ...this.
+	(micromips_to_32_reg_i_map): Rename to...
+	(micromips_to_32_reg_h_map2): ...this.
+	(print_micromips_insn): Remove "mi" case.  Print both registers
+	in the pair for "mh".
+
+2013-07-07  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Remove "+D" and "+T" entries.
+	* micromips-opc.c (micromips_opcodes): Likewise.
+	* mips-dis.c (print_insn_args, print_insn_micromips): Remove "+D"
+	and "+T" handling.  Check for a "0" suffix when deciding whether to
+	use coprocessor 0 names.  In that case, also check for ",H" selectors.
+
 2013-07-05  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
 
 	* s390-opc.c (J12_12, J24_24): New macros.

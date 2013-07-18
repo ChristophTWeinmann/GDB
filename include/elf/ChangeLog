@@ -1,3 +1,18 @@
+2013-07-15  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips.h (Tag_GNU_MIPS_ABI_FP): Remove comment.
+	(Val_GNU_MIPS_ABI_FP_ANY, Val_GNU_MIPS_ABI_FP_DOUBLE,
+	Val_GNU_MIPS_ABI_FP_SINGLE, Val_GNU_MIPS_ABI_FP_SOFT,
+	Val_GNU_MIPS_ABI_FP_64): New enum.
+
+2013-07-12  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips.h (EF_MIPS_NAN2008): New macro.
+
+2013-07-08  Tristan Gingold  <gingold@adacore.com>
+
+	* ia64.h (STB_VMS_WEAK, STB_VMS_SYSTEM): Add.
+
 2013-07-05  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
 
 	* s390.h: Add new relocs R_390_PC12DBL, R_390_PLT12DBL,
