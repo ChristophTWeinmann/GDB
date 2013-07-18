@@ -107,6 +107,11 @@ extern struct cmd_list_element *maintenance_set_cmdlist;
 
 extern struct cmd_list_element *maintenance_show_cmdlist;
 
+/* Chain containing all defined "maintenance dwarf2" subcommands.  */
+
+extern struct cmd_list_element *maintenance_dwarf2_list;
+
+
 extern struct cmd_list_element *setprintlist;
 
 extern struct cmd_list_element *showprintlist;

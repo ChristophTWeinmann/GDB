@@ -172,6 +172,10 @@ struct cmd_list_element *maintenanceinfolist;
 
 struct cmd_list_element *maintenanceprintlist;
 
+/* Chain containing all defined "maintenance dwarf2" subcommands.  */
+
+struct cmd_list_element *maintenance_dwarf2_list;
+
 struct cmd_list_element *setprintlist;
 
 struct cmd_list_element *showprintlist;

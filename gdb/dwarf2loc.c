@@ -4215,6 +4215,73 @@ const struct symbol_computed_ops dwarf2_loclist_funcs = {
   loclist_tracepoint_var_ref
 };
 
+static void
+dwarf2_disassemble (struct ui_file *stream, struct dwarf2_locexpr_baton *baton)
+{
+  struct objfile *objfile = dwarf2_per_cu_objfile (baton->per_cu);
+  unsigned int addr_size = dwarf2_per_cu_addr_size (baton->per_cu);
+  int offset_size = dwarf2_per_cu_offset_size (baton->per_cu);
+
+  disassemble_dwarf_expression (gdb_stdout,
+				get_objfile_arch (objfile),
+				addr_size, offset_size,
+				baton->data, baton->data,
+				baton->data + baton->size,
+				2,
+				dwarf2_always_disassemble,
+				baton->per_cu);
+}
+
+static void
+maintenance_dwarf2_command (char *arg, int from_tty)
+{
+  printf_unfiltered (_("\"maintenance dwarf2\" must be followed "
+		       "by the name of an dwarf2 command.\n"));
+  help_list (maintenance_dwarf2_list, "maintenance dwarf2 ", -1, gdb_stdout);
+}
+
+static void
+maintenance_dwarf2_vla_command (char *arg, int from_tty)
+{
+  struct symbol *sym;
+  struct type *type;
+  CORE_ADDR context_pc = 0;
+  struct field_of_this_result is_a_field_of_this;
+  struct obj_section *section;
+  struct dwarf2_locexpr_baton *baton;
+
+  if (arg == NULL)
+    error (_("Argument required."));
+
+  sym = lookup_symbol (arg, get_selected_block (&context_pc), VAR_DOMAIN,
+		       &is_a_field_of_this);
+  if (sym == NULL)
+    error (_("No symbol \"%s\" in current context."), arg);
+
+  type = SYMBOL_TYPE (sym);
+
+  if (TYPE_DATA_LOCATION_BATON (type))
+    {
+      printf_filtered (_("Data location:\n"));
+      dwarf2_disassemble (gdb_stdout, TYPE_DATA_LOCATION_BATON (type));
+      printf_filtered ("\n");
+    }
+
+  if (TYPE_ALLOCATED_BATON (type))
+    {
+      printf_filtered (_("Allocated:\n"));
+      dwarf2_disassemble (gdb_stdout, TYPE_ALLOCATED_BATON (type));
+      printf_filtered ("\n");
+    }
+
+  if (TYPE_ASSOCIATED_BATON (type))
+    {
+      printf_filtered (_("Associated:\n"));
+      dwarf2_disassemble (gdb_stdout, TYPE_ASSOCIATED_BATON (type));
+      printf_filtered ("\n");
+    }
+}
+
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_dwarf2loc;
 
@@ -4233,4 +4300,15 @@ _initialize_dwarf2loc (void)
 			     NULL,
 			     show_entry_values_debug,
 			     &setdebuglist, &showdebuglist);
+
+  add_prefix_cmd ("dwarf2", class_maintenance, maintenance_dwarf2_command,
+		  _("dwarf2 maintainance commands."),
+		  &maintenance_dwarf2_list, "maintenance dwarf2 ",
+		  0, /* allow-unknown.  */
+		  &maintenancelist);
+
+  add_cmd ("vla", class_maintenance,
+	   maintenance_dwarf2_vla_command,
+	   _("Dump vla specific attributes e.g. allocated, associated, data_location."),
+	   &maintenance_dwarf2_list);
 }
