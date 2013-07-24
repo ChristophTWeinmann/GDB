@@ -1780,6 +1780,11 @@ static void check_producer (struct dwarf2_cu *cu);
 static struct dwarf2_locexpr_baton* attr_to_locexprbaton
   (struct attribute *, struct dwarf2_cu *);
 
+static struct dwarf2_locexpr_baton* attr_to_locexprbaton_1
+  (struct attribute *, struct dwarf2_cu *, gdb_byte *additional_data,
+   int extra_size);
+
+
 #if WORDS_BIGENDIAN
 
 /* Convert VALUE between big- and little-endian.  */
@@ -12994,29 +12999,111 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
   struct type *type, *range_type, *index_type, *char_type;
   struct attribute *attr;
-  unsigned int length;
-
-  attr = dwarf2_attr (die, DW_AT_string_length, cu);
-  if (attr)
-    {
-      length = DW_UNSND (attr);
-    }
-  else
-    {
-      /* Check for the DW_AT_byte_size attribute.  */
-      attr = dwarf2_attr (die, DW_AT_byte_size, cu);
-      if (attr)
-        {
-          length = DW_UNSND (attr);
-        }
-      else
-        {
-          length = 1;
-        }
-    }
+  unsigned int length = -1;
 
   index_type = objfile_type (objfile)->builtin_int;
   range_type = create_range_type (NULL, index_type, 1, length);
+
+  /* If is define DW_AT_string_length, the length is stored at some location in
+     memory. */
+  attr = dwarf2_attr (die, DW_AT_string_length, cu);
+  if (attr)
+    {
+      if (attr_form_is_block (attr))
+        {
+          struct dwarf2_locexpr_baton *length_location = NULL;
+          struct attribute *byte_size, *bit_size;
+          gdb_byte *data;
+          gdb_byte op;
+
+          byte_size = dwarf2_attr (die, DW_AT_byte_size, cu);
+          bit_size = dwarf2_attr (die, DW_AT_bit_size, cu);
+
+          /* DW_AT_byte_size should never occur together in combination with
+             DW_AT_string_length.  */
+          if ((byte_size == NULL && bit_size != NULL) ||
+                  (byte_size != NULL && bit_size == NULL))
+            complaint (&symfile_complaints, _("DW_AT_byte_size AND "
+                      "DW_AT_bit_size found together at the same time."));
+
+          /* If DW_AT_string_length AND DW_AT_byte_size exist together, it
+             describes the number of bytes that should be read from the length
+             memory location.  */
+          if (byte_size != NULL && bit_size == NULL)
+            {
+              /* Build new dwarf2_locexpr_baton structure with additions to the
+                 data attribute, to reflect DWARF specialities to get address
+                 sizes.  */
+              gdb_byte append_ops[] = {
+                /* DW_OP_deref_size: size of an address on the target machine
+                   (bytes), where the size will be specified by the next
+                   operand.  */
+                DW_OP_deref_size,
+                /* Operand for DW_OP_deref_size.  */
+                DW_UNSND (byte_size) };
+
+              length_location = attr_to_locexprbaton_1(attr, cu,
+                      append_ops, 2);
+            }
+          else if (bit_size != NULL && byte_size == NULL)
+            {
+              complaint (&symfile_complaints, _("DW_AT_string_length AND "
+                      "DW_AT_bit_size found but not supported yet."));
+            }
+          /* If DW_AT_string_length WITHOUT DW_AT_byte_size exist, the default
+             is the address size of the target machine.  */
+          else
+            {
+              gdb_byte append_ops[] = {
+                /* DW_OP_deref: size of an address on the target
+                   machine (bytes).  */
+                DW_OP_deref };
+
+              length_location = attr_to_locexprbaton_1(attr, cu,
+                      append_ops, 1);
+            }
+
+          gdb_assert (length_location != NULL);
+
+          TYPE_HIGH_BOUND_BLOCK (range_type) = length_location;
+          TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_BLK;
+        }
+      else
+        {
+          TYPE_HIGH_BOUND (range_type) = DW_UNSND (attr);
+          TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_CONST;
+        }
+    }
+  else
+    {
+      /* Check for the DW_AT_byte_size attribute, which represents the length
+         in this case.  */
+      attr = dwarf2_attr (die, DW_AT_byte_size, cu);
+      if (attr)
+        {
+          if (attr_form_is_block (attr))
+            {
+              struct dwarf2_locexpr_baton *length_location = NULL;
+              length_location = attr_to_locexprbaton (attr, cu);
+
+              gdb_assert (length_location != NULL);
+
+              TYPE_HIGH_BOUND_BLOCK (range_type) = length_location;
+              TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_BLK;
+            }
+          else
+          {
+            TYPE_HIGH_BOUND (range_type) = DW_UNSND (attr);
+            TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_CONST;
+          }
+        }
+      else
+        {
+          TYPE_HIGH_BOUND (range_type) = 1;
+          TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_CONST;
+        }
+    }
+
   char_type = language_string_char_type (cu->language_defn, gdbarch);
   type = create_string_type (NULL, char_type, range_type);
 
@@ -21618,21 +21705,45 @@ Usage: save gdb-index DIRECTORY"),
    baton into "dynamic" types, e.g. VLA's.  */
 
 static struct dwarf2_locexpr_baton*
-attr_to_locexprbaton (struct attribute *attribute, struct dwarf2_cu *comp_unit)
+attr_to_locexprbaton (struct attribute *attribute, struct dwarf2_cu *cu)
+{
+  return attr_to_locexprbaton_1 (attribute, cu, NULL, 0);
+}
+
+static struct dwarf2_locexpr_baton*
+attr_to_locexprbaton_1 (struct attribute *attribute, struct dwarf2_cu *cu,
+        gdb_byte *additional_data, int extra_size)
 {
   struct objfile *objfile = dwarf2_per_objfile->objfile;
   struct dwarf2_locexpr_baton *baton;
 
-  gdb_assert (attribute != NULL && comp_unit != NULL &&
+  gdb_assert (attribute != NULL && cu != NULL &&
           attr_form_is_block (attribute));
 
   baton = obstack_alloc (&objfile->objfile_obstack,
     sizeof (struct dwarf2_locexpr_baton));
-  baton->per_cu = comp_unit->per_cu;
-  baton->size = DW_BLOCK (attribute)->size;
-  /* Copy the data pointer as the blocks lifetime is
-     bound to its object file.  */
-  baton->data = DW_BLOCK (attribute)->data;
+  baton->per_cu = cu->per_cu;
+  baton->size = DW_BLOCK (attribute)->size + extra_size;
+
+  if (additional_data != NULL && extra_size > 0) {
+    int i = 0;
+    gdb_byte *new_data;
+    new_data = obstack_alloc (&objfile->objfile_obstack, baton->size);
+    baton->data = new_data;
+
+    memcpy (new_data, DW_BLOCK (attribute)->data, DW_BLOCK (attribute)->size);
+
+    while (i < extra_size)
+      {
+        new_data[DW_BLOCK (attribute)->size + i] = additional_data[i];
+        i++;
+      }
+  } else {
+    /* Copy the data pointer as the blocks lifetime is
+       bound to its object file.  */
+    baton->data = DW_BLOCK (attribute)->data;
+  }
+
   gdb_assert(baton->data != NULL);
 
   return baton;
