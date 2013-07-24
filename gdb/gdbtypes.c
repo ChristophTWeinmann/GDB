@@ -3544,31 +3544,6 @@ copy_type_recursive (struct objfile *objfile,
 	   || TYPE_CODE (type) == TYPE_CODE_NAMESPACE)
     INIT_CPLUS_SPECIFIC (new_type);
 
-  if (TYPE_ALLOCATED_BATON (type))
-    {
-      TYPE_ALLOCATED_BATON (new_type) =
-              xmalloc (sizeof (struct dwarf2_locexpr_baton));
-      *TYPE_ALLOCATED_BATON (new_type) = *TYPE_ALLOCATED_BATON (type);
-    }
-  if (TYPE_ASSOCIATED_BATON (type))
-    {
-      TYPE_ASSOCIATED_BATON (new_type) =
-              xmalloc (sizeof (struct dwarf2_locexpr_baton));
-      *TYPE_ASSOCIATED_BATON (new_type) = *TYPE_ASSOCIATED_BATON (type);
-    }
-  if (TYPE_DATA_LOCATION_BATON (type))
-    {
-      TYPE_DATA_LOCATION_BATON (new_type) =
-              xmalloc (sizeof (struct dwarf2_locexpr_baton));
-      *TYPE_DATA_LOCATION_BATON (new_type) = *TYPE_DATA_LOCATION_BATON (type);
-    }
-  if (TYPE_DATA_LOCATION_IS_ADDRESS (type))
-    {
-      TYPE_DATA_LOCATION_IS_ADDRESS (new_type) =
-              TYPE_DATA_LOCATION_IS_ADDRESS (type);
-      TYPE_DATA_LOCATION_ADDR (new_type) = TYPE_DATA_LOCATION_ADDR (type);
-    }
-
   return new_type;
 }
 
