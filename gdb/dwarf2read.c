@@ -1640,6 +1640,8 @@ static struct type_unit_group *get_type_unit_group
 
 static void build_type_unit_groups (die_reader_func_ftype *, void *);
 
+CORE_ADDR dwarf2_read_obj_addr (struct dwarf2_locexpr_baton *);
+
 /* memory allocation interface */
 
 static struct dwarf_block *dwarf_alloc_block (struct dwarf2_cu *);
@@ -18243,6 +18245,7 @@ dwarf2_fetch_die_loc_sect_off (sect_offset offset,
       retval.data = DW_BLOCK (attr)->data;
       retval.size = DW_BLOCK (attr)->size;
     }
+  retval.obj_address = 0;
   retval.per_cu = cu->per_cu;
 
   age_cached_comp_units ();
@@ -21810,4 +21813,11 @@ attr_to_dwarf2_prop (struct type *type, struct die_info *die,
     }
 
   return 1;
+}
+
+/* Return the address of a VLA object, or 0 if no valid address was stored.  */
+
+CORE_ADDR dwarf2_read_obj_addr (struct dwarf2_locexpr_baton *baton)
+{
+  return baton->obj_address;
 }

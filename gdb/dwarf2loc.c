@@ -1228,6 +1228,17 @@ dwarf_expr_get_addr_index (void *baton, unsigned int index)
   return dwarf2_read_addr_index (debaton->per_cu, index);
 }
 
+/* Callback function for get_object_address. Return the address of the VLA
+   object.  */
+
+static CORE_ADDR
+dwarf_expr_get_obj_addr (void *baton)
+{
+  struct dwarf2_locexpr_baton *debaton = (struct dwarf2_locexpr_baton *) baton;
+
+  return dwarf2_read_obj_addr (debaton);
+}
+
 /* VALUE must be of type lval_computed with entry_data_value_funcs.  Perform
    the indirect method on it, that is use its stored target value, the sole
    purpose of entry_data_value_funcs..  */
@@ -2190,7 +2201,8 @@ static const struct dwarf_expr_context_funcs dwarf_expr_ctx_funcs =
   dwarf_expr_dwarf_call,
   dwarf_expr_get_base_type,
   dwarf_expr_push_dwarf_reg_entry_value,
-  dwarf_expr_get_addr_index
+  dwarf_expr_get_addr_index,
+  dwarf_expr_get_obj_addr
 };
 
 /* Evaluate a location description, starting at DATA and with length
@@ -2502,6 +2514,15 @@ needs_get_addr_index (void *baton, unsigned int index)
   return 1;
 }
 
+/* DW_OP_push_object_address has a frame already passed thru.  */
+
+static CORE_ADDR
+needs_get_obj_addr (void *baton)
+{
+  /* Nothing to do here.  */
+    return 1;
+}
+
 /* Virtual method table for dwarf2_loc_desc_needs_frame below.  */
 
 static const struct dwarf_expr_context_funcs needs_frame_ctx_funcs =
@@ -2515,7 +2536,8 @@ static const struct dwarf_expr_context_funcs needs_frame_ctx_funcs =
   needs_frame_dwarf_call,
   NULL,				/* get_base_type */
   needs_dwarf_reg_entry_value,
-  needs_get_addr_index
+  needs_get_addr_index,
+  needs_get_obj_addr
 };
 
 /* Return non-zero iff the location expression at DATA (length SIZE)

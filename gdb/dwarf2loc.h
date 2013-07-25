@@ -93,6 +93,8 @@ struct value *dwarf2_evaluate_loc_desc (struct type *type,
 CORE_ADDR dwarf2_read_addr_index (struct dwarf2_per_cu_data *per_cu,
 				  unsigned int addr_index);
 
+CORE_ADDR dwarf2_read_obj_addr (struct dwarf2_locexpr_baton *baton);
+
 /* The symbol location baton types used by the DWARF-2 reader (i.e.
    SYMBOL_LOCATION_BATON for a LOC_COMPUTED symbol).  "struct
    dwarf2_locexpr_baton" is for a symbol with a single location
@@ -112,6 +114,9 @@ struct dwarf2_locexpr_baton
   /* The compilation unit containing the symbol whose location
      we're computing.  */
   struct dwarf2_per_cu_data *per_cu;
+
+  /* Location of a vla object.  */
+  CORE_ADDR obj_address;
 };
 
 struct dwarf2_loclist_baton
