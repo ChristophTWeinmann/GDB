@@ -12370,27 +12370,6 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
 		     "than the total size of elements"));
     }
 
-  /* Read DW_AT_allocated and set in type.  */
-  attr = dwarf2_attr (die, DW_AT_allocated, cu);
-  if (attr_form_is_block (attr)) {
-      TYPE_ALLOCATED_BATON (type) = attr_to_locexprbaton (attr, cu);
-      gdb_assert (TYPE_ALLOCATED_BATON (type) != NULL);
-  }
-
-  /* Read DW_AT_associated and set in type.  */
-  attr = dwarf2_attr (die, DW_AT_associated, cu);
-  if (attr_form_is_block (attr)) {
-      TYPE_ASSOCIATED_BATON (type) = attr_to_locexprbaton (attr, cu);
-      gdb_assert (TYPE_ASSOCIATED_BATON (type) != NULL);
-  }
-
-  /* Read DW_AT_data_location and set in type.  */
-  attr = dwarf2_attr (die, DW_AT_data_location, cu);
-  if (attr_form_is_block (attr)) {
-      TYPE_DATA_LOCATION_BATON (type) = attr_to_locexprbaton (attr, cu);
-      gdb_assert (TYPE_DATA_LOCATION_BATON (type) != NULL);
-  }
-
   name = dwarf2_name (die, cu);
   if (name)
     TYPE_NAME (type) = name;
@@ -20471,6 +20450,7 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
 {
   struct dwarf2_per_cu_offset_and_type **slot, ofs;
   struct objfile *objfile = cu->objfile;
+  struct attribute *attr;
 
   /* For Ada types, make sure that the gnat-specific data is always
      initialized (if not already set).  There are a few types where
@@ -20484,6 +20464,30 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
       && TYPE_CODE (type) != TYPE_CODE_FLT
       && !HAVE_GNAT_AUX_INFO (type))
     INIT_GNAT_SPECIFIC (type);
+
+  /* Read DW_AT_allocated and set in type.  */
+  attr = dwarf2_attr (die, DW_AT_allocated, cu);
+  if (attr_form_is_block (attr))
+    {
+      TYPE_ALLOCATED_BATON (type) = attr_to_locexprbaton (attr, cu);
+      gdb_assert (TYPE_ALLOCATED_BATON (type) != NULL);
+    }
+
+  /* Read DW_AT_associated and set in type.  */
+  attr = dwarf2_attr (die, DW_AT_associated, cu);
+  if (attr_form_is_block (attr))
+    {
+      TYPE_ASSOCIATED_BATON (type) = attr_to_locexprbaton (attr, cu);
+      gdb_assert (TYPE_ASSOCIATED_BATON (type) != NULL);
+    }
+
+  /* Read DW_AT_data_location and set in type.  */
+  attr = dwarf2_attr (die, DW_AT_data_location, cu);
+  if (attr_form_is_block (attr))
+    {
+      TYPE_DATA_LOCATION_BATON (type) = attr_to_locexprbaton (attr, cu);
+      gdb_assert (TYPE_DATA_LOCATION_BATON (type) != NULL);
+    }
 
   if (dwarf2_per_objfile->die_type_hash == NULL)
     {
