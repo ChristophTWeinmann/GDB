@@ -1597,6 +1597,10 @@ extern struct type *lookup_function_type_with_arguments (struct type *,
 							 int,
 							 struct type **);
 
+extern struct type *create_range_type_1 (struct type *, struct type *,
+					 const struct dwarf2_prop *,
+					 const struct dwarf2_prop *);
+
 extern struct type *create_range_type (struct type *, struct type *, LONGEST,
 				       LONGEST);
 

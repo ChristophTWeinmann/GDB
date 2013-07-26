@@ -793,8 +793,9 @@ allocate_stub_method (struct type *type)
    sure it is TYPE_CODE_UNDEF before we bash it into a range type?  */
 
 struct type *
-create_range_type (struct type *result_type, struct type *index_type,
-		   LONGEST low_bound, LONGEST high_bound)
+create_range_type_1 (struct type *result_type, struct type *index_type,
+		     const struct dwarf2_prop *low_bound,
+		     const struct dwarf2_prop *high_bound)
 {
   if (result_type == NULL)
     result_type = alloc_type_copy (index_type);
@@ -806,8 +807,34 @@ create_range_type (struct type *result_type, struct type *index_type,
     TYPE_LENGTH (result_type) = TYPE_LENGTH (check_typedef (index_type));
   TYPE_RANGE_DATA (result_type) = (struct range_bounds *)
     TYPE_ZALLOC (result_type, sizeof (struct range_bounds));
-  TYPE_LOW_BOUND (result_type) = low_bound;
-  TYPE_HIGH_BOUND (result_type) = high_bound;
+  TYPE_RANGE_DATA (result_type)->low = *low_bound;
+  TYPE_RANGE_DATA (result_type)->high = *high_bound;
+
+  return result_type;
+}
+
+/* Create a range type using either a blank type supplied in
+   RESULT_TYPE, or creating a new type, inheriting the objfile from
+   INDEX_TYPE.
+
+   Indices will be of type INDEX_TYPE, and will range from LOW_BOUND
+   to HIGH_BOUND, inclusive.
+*/
+
+struct type *
+create_range_type (struct type *result_type, struct type *index_type,
+		   LONGEST low_bound, LONGEST high_bound)
+{
+  struct dwarf2_prop low, high;
+
+  low.kind = DWARF_CONST;
+  low.data.const_val = low_bound;
+
+  high.kind = DWARF_CONST;
+  high.data.const_val = high_bound;
+
+  result_type = create_range_type_1 (result_type, index_type,
+				     &low, &high);
 
   if (low_bound >= 0)
     TYPE_UNSIGNED (result_type) = 1;
