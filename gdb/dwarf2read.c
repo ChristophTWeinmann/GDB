@@ -1784,6 +1784,9 @@ static struct dwarf2_locexpr_baton* attr_to_locexprbaton_1
   (struct attribute *, struct dwarf2_cu *, gdb_byte *additional_data,
    int extra_size);
 
+static int attr_to_dwarf2_prop
+  (struct type *, struct die_info *, struct attribute *, struct dwarf2_cu *,
+   struct dwarf2_prop *);
 
 #if WORDS_BIGENDIAN
 
@@ -20467,18 +20470,22 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
 
   /* Read DW_AT_allocated and set in type.  */
   attr = dwarf2_attr (die, DW_AT_allocated, cu);
-  if (attr_form_is_block (attr))
+  if (attr != NULL)
     {
-      TYPE_ALLOCATED_BATON (type) = attr_to_locexprbaton (attr, cu);
-      gdb_assert (TYPE_ALLOCATED_BATON (type) != NULL);
+      struct dwarf2_prop prop;
+
+      if (attr_to_dwarf2_prop (type, die, attr, cu, &prop))
+        TYPE_ALLOCATED_PROP (type) = prop;
     }
 
   /* Read DW_AT_associated and set in type.  */
   attr = dwarf2_attr (die, DW_AT_associated, cu);
-  if (attr_form_is_block (attr))
+  if (attr != NULL)
     {
-      TYPE_ASSOCIATED_BATON (type) = attr_to_locexprbaton (attr, cu);
-      gdb_assert (TYPE_ASSOCIATED_BATON (type) != NULL);
+      struct dwarf2_prop prop;
+
+      if (attr_to_dwarf2_prop (type, die, attr, cu, &prop))
+        TYPE_ASSOCIATED_PROP (type) = prop;
     }
 
   /* Read DW_AT_data_location and set in type.  */
@@ -21751,4 +21758,47 @@ attr_to_locexprbaton_1 (struct attribute *attribute, struct dwarf2_cu *cu,
   gdb_assert(baton->data != NULL);
 
   return baton;
+}
+
+/* Parse dwarf attribute if it's a block, reference or constant and put the
+   resulting value of the attribute into struct dwarf2_prop.  */
+
+static int
+attr_to_dwarf2_prop (struct type *type, struct die_info *die,
+        struct attribute *attr, struct dwarf2_cu *cu, struct dwarf2_prop *prop)
+{
+  if (type == NULL || die == NULL || attr == NULL || cu == NULL || prop == NULL)
+    return 0;
+
+  if (attr_form_is_block (attr))
+    {
+      prop->data.locexpr = attr_to_locexprbaton (attr, cu);
+      prop->kind = DWARF_LOCEXPR;
+      gdb_assert (prop->data.locexpr != NULL);
+    }
+  else if (is_ref_attr (attr))
+    {
+      struct dwarf2_loclist_baton *baton;
+
+      baton = obstack_alloc (&dwarf2_per_objfile->objfile->objfile_obstack,
+                             sizeof (struct dwarf2_loclist_baton));
+      fill_in_loclist_baton (cu, baton, attr);
+      prop->data.loclist = baton;
+      prop->kind = DWARF_LOCLIST;
+      gdb_assert (prop->data.loclist != NULL);
+    }
+  else if (attr_form_is_constant (attr))
+    {
+      prop->data.const_val = dwarf2_get_attr_constant_value (attr, -1);
+      prop->kind = DWARF_CONST;
+      gdb_assert (prop->data.const_val != -1);
+    }
+  else
+    {
+      dwarf2_invalid_attrib_class_complaint(dwarf_form_name (attr->form),
+              dwarf2_name (die, cu));
+      return 0;
+    }
+
+  return 1;
 }

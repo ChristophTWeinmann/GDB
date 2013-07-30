@@ -409,6 +409,27 @@ enum type_specific_kind
   TYPE_SPECIFIC_FUNC
 };
 
+/* Used to store dwarf information for dynamic types.  The structure can store
+   dwarf expressions and lists, as well as constant values.  */
+
+struct dwarf2_prop
+{
+  /* Characteristic of stored information currently used in type.  */
+  enum
+  {
+    DWARF_CONST,
+    DWARF_LOCEXPR,
+    DWARF_LOCLIST
+  } kind;
+
+  union data
+  {
+    LONGEST const_val;
+    struct dwarf2_locexpr_baton *locexpr;
+    struct dwarf2_loclist_baton *loclist;
+  } data;
+};
+
 /* This structure is space-critical.
    Its layout has been tweaked to reduce the space used.  */
 
@@ -680,16 +701,17 @@ struct main_type
     CORE_ADDR address;
   } data_location;
 
-  /* Baton for DW_AT_allocated.
+  /* Structure for DW_AT_allocated.
      The presence of this attribute indicates that the object of the type
-     can be allocated/deallocated.  Can be evaluated using
-     DW_AT_push_object_address.  */
-  struct dwarf2_locexpr_baton *allocated_baton;
+     can be allocated/deallocated.  The value can be a dwarf expression,
+     reference, or a constant.  */
+  struct dwarf2_prop allocated;
 
-  /* Baton for DW_AT_associated.
+  /* Structure for DW_AT_associated.
      The presence of this attribute indicated that the object of the type
-     can be associated.  Can be evaluated using DW_AT_push_object_address.  */
-  struct dwarf2_locexpr_baton *associated_baton;
+     can be associated.  The value can be a dwarf expression,
+     reference, or a constant.  */
+  struct dwarf2_prop associated;
 };
 
 /* A ``struct type'' describes a particular instance of a type, with
@@ -1134,8 +1156,8 @@ extern void allocate_gnat_aux_type (struct type *);
 /* Attribute accessors for VLA support.  */
 #define TYPE_DATA_LOCATION_BATON(thistype) TYPE_MAIN_TYPE(thistype)->data_location.baton
 #define TYPE_DATA_LOCATION_ADDR(thistype) TYPE_MAIN_TYPE(thistype)->data_location.address
-#define TYPE_ALLOCATED_BATON(thistype) TYPE_MAIN_TYPE(thistype)->allocated_baton
-#define TYPE_ASSOCIATED_BATON(thistype) TYPE_MAIN_TYPE(thistype)->associated_baton
+#define TYPE_ALLOCATED_PROP(thistype) TYPE_MAIN_TYPE(thistype)->allocated
+#define TYPE_ASSOCIATED_PROP(thistype) TYPE_MAIN_TYPE(thistype)->associated
 
 /* Moto-specific stuff for FORTRAN arrays.  */
 

@@ -4267,17 +4267,17 @@ maintenance_dwarf2_vla_command (char *arg, int from_tty)
       printf_filtered ("\n");
     }
 
-  if (TYPE_ALLOCATED_BATON (type))
+  if (TYPE_ALLOCATED_PROP (type).data.locexpr)
     {
       printf_filtered (_("Allocated:\n"));
-      dwarf2_disassemble (gdb_stdout, TYPE_ALLOCATED_BATON (type));
+      dwarf2_disassemble (gdb_stdout, TYPE_ALLOCATED_PROP (type).data.locexpr);
       printf_filtered ("\n");
     }
 
-  if (TYPE_ASSOCIATED_BATON (type))
+  if (TYPE_ASSOCIATED_PROP (type).data.locexpr)
     {
       printf_filtered (_("Associated:\n"));
-      dwarf2_disassemble (gdb_stdout, TYPE_ASSOCIATED_BATON (type));
+      dwarf2_disassemble (gdb_stdout, TYPE_ASSOCIATED_PROP (type).data.locexpr);
       printf_filtered ("\n");
     }
 }
