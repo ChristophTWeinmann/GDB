@@ -1,3 +1,44 @@
+2013-07-27  Jie Zhang  <jie@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+	    Yao Qi  <yao@codesourcery.com>
+
+	* Makefile.in (SFILES): Add common/mips-linux-watch.c.
+	(mips-linux-watch.o): New rule.
+	(mips_linux_watch_h): New variable.
+	* configure.srv <mips*-*-linux*>: Add mips-linux-watch.o to
+	srv_tgtobj.
+	* linux-mips-low.c: Include mips-linux-watch.h.
+	(struct arch_process_info, struct arch_lwp_info): New.
+	(update_watch_registers_callback): New function.
+	(mips_linux_new_process, mips_linux_new_thread) New functions.
+	(mips_linux_prepare_to_resume, mips_insert_point): New
+	functions.
+	(mips_remove_point, mips_stopped_by_watchpoint): New
+	functions.
+	(rsp_bp_type_to_target_hw_bp_type): New function.
+	(mips_stopped_data_address): New function.
+	(the_low_target): Add watchpoint support functions.
+
+2013-07-27  Yao Qi  <yao@codesourcery.com>
+
+	* i386-low.c: Include break-common.h.
+	(enum target_hw_bp_type): Remove.
+
+2013-07-24  Luis Machado  <lgustavo@codesourcery.com>
+
+	* Makefile.in (SFILES): /common/target-common.c.
+	(OBS): Add target-common.o.
+	(server_h): Add $(srcdir)/../common/target-common.h.
+	(target-common.o): New target.
+	* server.c (queue_stop_reply_callback): Free
+	status string after use.
+	* target.c (target_waitstatus_to_string): Remove.
+	* target.h: Include target-common.h.
+	(resume_kind): Likewise.
+	(target_waitkind): Likewise.
+	(target_waitstatus): Likewise.
+	(TARGET_WNOHANG): Likewise.
+
 2013-07-04  Yao Qi  <yao@codesourcery.com>
 
 	* Makefile.in (host_alias): Use @host_noncanonical@.

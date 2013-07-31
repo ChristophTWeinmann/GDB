@@ -34,6 +34,11 @@ maint set|show per-command symtab
 
 * New options
 
+set print raw frame-arguments
+show print raw frame-arguments
+  Set/show whether to print frame arguments in raw mode,
+  disregarding any defined pretty-printers.
+
 set remote trace-status-packet
 show remote trace-status-packet
   Set/show the use of remote protocol qTStatus packet.
@@ -122,6 +127,12 @@ qXfer:libraries-svr4:read's annex
   ** GDBserver now adds element 'tvar' in the XML in the reply to
      'qXfer:traceframe-info:read'.  It has the id of the collected
      trace state variables.
+
+  ** GDBserver now supports hardware watchpoints on the MIPS GNU/Linux
+     target.
+
+* New 'z' formatter for printing and examining memory, this displays the
+  value as hexadecimal zero padded on the left to the size of the type.
 
 *** Changes in GDB 7.6
 

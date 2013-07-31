@@ -57,6 +57,7 @@ struct expression;
    it goes into the file stratum, which is always below the process
    stratum.  */
 
+#include "target-common.h"
 #include "bfd.h"
 #include "symtab.h"
 #include "memattr.h"
@@ -80,106 +81,6 @@ enum thread_control_capabilities
     tc_none = 0,		/* Default: can't control thread execution.  */
     tc_schedlock = 1,		/* Can lock the thread scheduler.  */
   };
-
-/* Stuff for target_wait.  */
-
-/* Generally, what has the program done?  */
-enum target_waitkind
-  {
-    /* The program has exited.  The exit status is in value.integer.  */
-    TARGET_WAITKIND_EXITED,
-
-    /* The program has stopped with a signal.  Which signal is in
-       value.sig.  */
-    TARGET_WAITKIND_STOPPED,
-
-    /* The program has terminated with a signal.  Which signal is in
-       value.sig.  */
-    TARGET_WAITKIND_SIGNALLED,
-
-    /* The program is letting us know that it dynamically loaded something
-       (e.g. it called load(2) on AIX).  */
-    TARGET_WAITKIND_LOADED,
-
-    /* The program has forked.  A "related" process' PTID is in
-       value.related_pid.  I.e., if the child forks, value.related_pid
-       is the parent's ID.  */
-
-    TARGET_WAITKIND_FORKED,
-
-    /* The program has vforked.  A "related" process's PTID is in
-       value.related_pid.  */
-
-    TARGET_WAITKIND_VFORKED,
-
-    /* The program has exec'ed a new executable file.  The new file's
-       pathname is pointed to by value.execd_pathname.  */
-
-    TARGET_WAITKIND_EXECD,
-
-    /* The program had previously vforked, and now the child is done
-       with the shared memory region, because it exec'ed or exited.
-       Note that the event is reported to the vfork parent.  This is
-       only used if GDB did not stay attached to the vfork child,
-       otherwise, a TARGET_WAITKIND_EXECD or
-       TARGET_WAITKIND_EXIT|SIGNALLED event associated with the child
-       has the same effect.  */
-    TARGET_WAITKIND_VFORK_DONE,
-
-    /* The program has entered or returned from a system call.  On
-       HP-UX, this is used in the hardware watchpoint implementation.
-       The syscall's unique integer ID number is in value.syscall_id.  */
-
-    TARGET_WAITKIND_SYSCALL_ENTRY,
-    TARGET_WAITKIND_SYSCALL_RETURN,
-
-    /* Nothing happened, but we stopped anyway.  This perhaps should be handled
-       within target_wait, but I'm not sure target_wait should be resuming the
-       inferior.  */
-    TARGET_WAITKIND_SPURIOUS,
-
-    /* An event has occured, but we should wait again.
-       Remote_async_wait() returns this when there is an event
-       on the inferior, but the rest of the world is not interested in
-       it.  The inferior has not stopped, but has just sent some output
-       to the console, for instance.  In this case, we want to go back
-       to the event loop and wait there for another event from the
-       inferior, rather than being stuck in the remote_async_wait()
-       function. sThis way the event loop is responsive to other events,
-       like for instance the user typing.  */
-    TARGET_WAITKIND_IGNORE,
-
-    /* The target has run out of history information,
-       and cannot run backward any further.  */
-    TARGET_WAITKIND_NO_HISTORY,
-
-    /* There are no resumed children left in the program.  */
-    TARGET_WAITKIND_NO_RESUMED
-  };
-
-struct target_waitstatus
-  {
-    enum target_waitkind kind;
-
-    /* Forked child pid, execd pathname, exit status, signal number or
-       syscall number.  */
-    union
-      {
-	int integer;
-	enum gdb_signal sig;
-	ptid_t related_pid;
-	char *execd_pathname;
-	int syscall_number;
-      }
-    value;
-  };
-
-/* Options that can be passed to target_wait.  */
-
-/* Return immediately if there's no event already queued.  If this
-   options is not requested, target_wait blocks waiting for an
-   event.  */
-#define TARGET_WNOHANG 1
 
 /* The structure below stores information about a system call.
    It is basically used in the "catch syscall" command, and in
@@ -854,9 +755,18 @@ struct target_ops
       (const char *id);
 
     /* Return a traceframe info object describing the current
-       traceframe's contents.  This method should not cache data;
-       higher layers take care of caching, invalidating, and
-       re-fetching when necessary.  */
+       traceframe's contents.  If the target doesn't support
+       traceframe info, return NULL.  If the current traceframe is not
+       selected (the current traceframe number is -1), the target can
+       choose to return either NULL or an empty traceframe info.  If
+       NULL is returned, for example in remote target, GDB will read
+       from the live inferior.  If an empty traceframe info is
+       returned, for example in tfile target, which means the
+       traceframe info is available, but the requested memory is not
+       available in it.  GDB will try to see if the requested memory
+       is available in the read-only sections.  This method should not
+       cache data; higher layers take care of caching, invalidating,
+       and re-fetching when necessary.  */
     struct traceframe_info *(*to_traceframe_info) (void);
 
     /* Ask the target to use or not to use agent according to USE.  Return 1
@@ -1837,6 +1747,9 @@ int target_verify_memory (const gdb_byte *data,
 
 /* Routines for maintenance of the target structures...
 
+   complete_target_initialization: Finalize a target_ops by filling in
+   any fields needed by the target implementation.
+
    add_target:   Add a target to the list of all possible targets.
 
    push_target:  Make this target the top of the stack of currently used
@@ -1846,14 +1759,14 @@ int target_verify_memory (const gdb_byte *data,
 
    unpush_target: Remove this from the stack of currently used targets,
    no matter where it is on the list.  Returns 0 if no
-   change, 1 if removed from stack.
-
-   pop_target:   Remove the top thing on the stack of current targets.  */
+   change, 1 if removed from stack.  */
 
 extern void add_target (struct target_ops *);
 
 extern void add_target_with_completer (struct target_ops *t,
 				       completer_ftype *completer);
+
+extern void complete_target_initialization (struct target_ops *t);
 
 /* Adds a command ALIAS for target T and marks it deprecated.  This is useful
    for maintaining backwards compatibility when renaming targets.  */
@@ -1867,8 +1780,6 @@ extern int unpush_target (struct target_ops *);
 extern void target_pre_inferior (int);
 
 extern void target_preopen (int);
-
-extern void pop_target (void);
 
 /* Does whatever cleanup is required to get rid of all pushed targets.  */
 extern void pop_all_targets (void);
@@ -1893,11 +1804,12 @@ struct target_section
 
     struct bfd_section *the_bfd_section;
 
-    /* A given BFD may appear multiple times in the target section
-       list, so each BFD is associated with a given key.  The key is
-       just some convenient pointer that can be used to differentiate
-       the BFDs.  These are managed only by convention.  */
-    void *key;
+    /* The "owner" of the section.
+       It can be any unique value.  It is set by add_target_sections
+       and used by remove_target_sections.
+       For example, for executables it is a pointer to exec_bfd and
+       for shlibs it is the so_list pointer.  */
+    void *owner;
   };
 
 /* Holds an array of target sections.  Defined by [SECTIONS..SECTIONS_END[.  */

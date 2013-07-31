@@ -381,16 +381,12 @@ target_has_execution_current (void)
   return target_has_execution_1 (inferior_ptid);
 }
 
-/* Add possible target architecture T to the list and add a new
-   command 'target T->to_shortname'.  Set COMPLETER as the command's
-   completer if not NULL.  */
+/* Complete initialization of T.  This ensures that various fields in
+   T are set, if needed by the target implementation.  */
 
 void
-add_target_with_completer (struct target_ops *t,
-			   completer_ftype *completer)
+complete_target_initialization (struct target_ops *t)
 {
-  struct cmd_list_element *c;
-
   /* Provide default values for all "must have" methods.  */
   if (t->to_xfer_partial == NULL)
     t->to_xfer_partial = default_xfer_partial;
@@ -409,6 +405,19 @@ add_target_with_completer (struct target_ops *t,
 
   if (t->to_has_execution == NULL)
     t->to_has_execution = (int (*) (struct target_ops *, ptid_t)) return_zero;
+}
+
+/* Add possible target architecture T to the list and add a new
+   command 'target T->to_shortname'.  Set COMPLETER as the command's
+   completer if not NULL.  */
+
+void
+add_target_with_completer (struct target_ops *t,
+			   completer_ftype *completer)
+{
+  struct cmd_list_element *c;
+
+  complete_target_initialization (t);
 
   if (!target_structs)
     {
@@ -962,7 +971,7 @@ update_current_target (void)
 	    tcomplain);
   de_fault (to_traceframe_info,
 	    (struct traceframe_info * (*) (void))
-	    tcomplain);
+	    return_zero);
   de_fault (to_supports_evaluation_of_breakpoint_conditions,
 	    (int (*) (void))
 	    return_zero);
@@ -1085,25 +1094,10 @@ unpush_target (struct target_ops *t)
 }
 
 void
-pop_target (void)
-{
-  target_close (target_stack);		/* Let it clean up.  */
-  if (unpush_target (target_stack) == 1)
-    return;
-
-  fprintf_unfiltered (gdb_stderr,
-		      "pop_target couldn't find target %s\n",
-		      current_target.to_shortname);
-  internal_error (__FILE__, __LINE__,
-		  _("failed internal consistency check"));
-}
-
-void
 pop_all_targets_above (enum strata above_stratum)
 {
   while ((int) (current_target.to_stratum) > (int) above_stratum)
     {
-      target_close (target_stack);
       if (!unpush_target (target_stack))
 	{
 	  fprintf_unfiltered (gdb_stderr,
@@ -3772,6 +3766,8 @@ debug_to_open (char *args, int from_tty)
 void
 target_close (struct target_ops *targ)
 {
+  gdb_assert (!target_is_pushed (targ));
+
   if (targ->to_xclose != NULL)
     targ->to_xclose (targ);
   else if (targ->to_close != NULL)
@@ -3861,52 +3857,6 @@ debug_to_post_attach (int pid)
   debug_target.to_post_attach (pid);
 
   fprintf_unfiltered (gdb_stdlog, "target_post_attach (%d)\n", pid);
-}
-
-/* Return a pretty printed form of target_waitstatus.
-   Space for the result is malloc'd, caller must free.  */
-
-char *
-target_waitstatus_to_string (const struct target_waitstatus *ws)
-{
-  const char *kind_str = "status->kind = ";
-
-  switch (ws->kind)
-    {
-    case TARGET_WAITKIND_EXITED:
-      return xstrprintf ("%sexited, status = %d",
-			 kind_str, ws->value.integer);
-    case TARGET_WAITKIND_STOPPED:
-      return xstrprintf ("%sstopped, signal = %s",
-			 kind_str, gdb_signal_to_name (ws->value.sig));
-    case TARGET_WAITKIND_SIGNALLED:
-      return xstrprintf ("%ssignalled, signal = %s",
-			 kind_str, gdb_signal_to_name (ws->value.sig));
-    case TARGET_WAITKIND_LOADED:
-      return xstrprintf ("%sloaded", kind_str);
-    case TARGET_WAITKIND_FORKED:
-      return xstrprintf ("%sforked", kind_str);
-    case TARGET_WAITKIND_VFORKED:
-      return xstrprintf ("%svforked", kind_str);
-    case TARGET_WAITKIND_EXECD:
-      return xstrprintf ("%sexecd", kind_str);
-    case TARGET_WAITKIND_VFORK_DONE:
-      return xstrprintf ("%svfork-done", kind_str);
-    case TARGET_WAITKIND_SYSCALL_ENTRY:
-      return xstrprintf ("%sentered syscall", kind_str);
-    case TARGET_WAITKIND_SYSCALL_RETURN:
-      return xstrprintf ("%sexited syscall", kind_str);
-    case TARGET_WAITKIND_SPURIOUS:
-      return xstrprintf ("%sspurious", kind_str);
-    case TARGET_WAITKIND_IGNORE:
-      return xstrprintf ("%signore", kind_str);
-    case TARGET_WAITKIND_NO_HISTORY:
-      return xstrprintf ("%sno-history", kind_str);
-    case TARGET_WAITKIND_NO_RESUMED:
-      return xstrprintf ("%sno-resumed", kind_str);
-    default:
-      return xstrprintf ("%sunknown???", kind_str);
-    }
 }
 
 /* Concatenate ELEM to LIST, a comma separate list, and return the
@@ -5025,7 +4975,7 @@ maintenance_print_target_stack (char *cmd, int from_tty)
 int target_async_permitted = 0;
 
 /* The set command writes to this variable.  If the inferior is
-   executing, linux_nat_async_permitted is *not* updated.  */
+   executing, target_async_permitted is *not* updated.  */
 static int target_async_permitted_1 = 0;
 
 static void

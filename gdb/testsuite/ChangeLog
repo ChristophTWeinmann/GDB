@@ -1,3 +1,144 @@
+2013-07-31  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/backtrace.exp (gdb_backtrace_tdp_4): Test command
+	'tdump' on stack frame 0 and 1 respectively.
+
+2013-07-31  Yao Qi  <yao@codesourcery.com>
+
+	PR gdb/13443
+	* gdb.trace/backtrace.exp (gdb_backtrace_tdp_3): Add parameter
+	'traceframe'.  Wrap test with with_test_prefix.
+	(top level): Update.
+
+2013-07-31  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/backtrace.exp: Don't invoke 'get_exit' and
+	'gdb_start'.
+	Invoke 'prepare_for_testing' instead of 'gdb_compile'.
+	Use gdb_test_no_output to issue commands 'tstart' and 'tstop'.
+
+2013-07-30  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb.dwarf2/pieces-optimized-out.exp: Expect "<optimized out>"
+	when printing an optimized out value.  Expect an error when using
+	an optimized out value in an expression.
+
+2013-07-30  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb.dwarf2/pieces-optimized-out.exp: New file.
+	* gdb.dwarf2/pieces-optimized-out.c: New file.
+	* gdb.dwarf2/pieces-optimized-out.S: New file.
+
+2013-07-30  Muhammad Bilal  <mbilal@codesourcery.com>
+
+	PR gdb/15715
+	* gdb.base/setshow.exp: Test that relative paths passed to
+	'set history filename' are converted to absolute paths.
+
+2013-07-26  Keith Seitz  <keiths@redhat.com>
+
+	* gdb.mi/mi-var-child-f.exp: Pass f90 to gdb_compile instead
+	of f77.
+	Allow for compiler variations of integer types.
+	Use mi_create_varobj.
+	Use mi_list_varobj_children for the immediate children of `array'.
+	Add "has_more" attribute for grandchildren test.
+
+2013-07-26  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/interrupt-noterm.c, gdb.base/interrupt-noterm.exp: New
+	files.
+
+2013-07-25  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb.mi/mi-reg-undefined.exp: New file.
+	* gdb.mi/mi-reg-undefined.c: Likewise.
+	* gdb.mi/mi-reg-undefined.S: Likewise.
+
+2013-07-25  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb.base/printcmds.exp (test_print_int_arrays): Add tests for x,
+	z, o, and t output formats.
+	* gdb.base/display.exp: Use 'k' as an undefined format now that
+	'z' is defined.
+
+2013-07-24  Doug Evans  <dje@google.com>
+
+	* boards/native-stdio-gdbserver.exp (${board}_build_remote_cmd): Pass
+	"--" to switch.
+
+2013-07-24  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.mi/mi-var-cmd.exp: If host is remote, use ${testfile} on
+	host.
+	* gdb.mi/mi-basics.exp (test_exec_and_symbol_mi_operatons):
+	Likewise.  If host is remote, copy ${binfile} to host.
+
+2013-07-23  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.mi/mi-var-cmd.exp: Adjust pattern to match current error
+	message.
+
+2013-07-19  Omair Javaid  <Omair.Javaid@linaro.org>
+
+	* gdb.base/disp-step-syscall.exp: Add svc and swi syscall
+	instructions and enable disp-step-syscall for arm targets.
+
+2013-07-19  Omair Javaid  <Omair.Javaid@linaro.org>
+
+	* gdb.dwarf2/fission-reread.S: Replace @ sign with % sign to remove
+	assembler errors on arm.
+	* gdb.dwarf2/mac-fileno.S: Likewise.
+	* gdb.dwarf2/member-ptr-forwardref.S: Likewise.
+	* gdb.dwarf2/pr13961.S: Likewise.
+
+2013-07-19  Hui Zhu  <hui@codesourcery.com>
+
+	PR gdb/15692
+	* gdb.mi/mi-dprintf.exp: Add double quotes test.
+
+2013-07-19  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/read-memory.exp (test_from_remote): Update test.
+	(teset_from_exec): Likewise.
+
+2013-07-19  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/read-memory.c: New.
+	* gdb.trace/read-memory.exp: New.
+
+2013-07-19  Yao Qi  <yao@codesourcery.com>
+
+	* lib/gdb.exp (gdb_compile_shlib): Pass the tail name of
+	$dest to link options if host is remote.  Move the
+	generated file to $dest.a on host if host is remote.
+
+2013-07-18  Will Newton  <will.newton@linaro.org>
+
+	* gdb.threads/tls-nodebug.c: Call pthread_testcancel
+	to ensure the test is linked against pthreads.
+	* gdb.threads/tls-var-main.c: Likewise.
+	* gdb.threads/tls-shared.c: Likewise.
+
+2013-07-18  Yao Qi  <yao@codesourcery.com>
+
+	* lib/future.exp (gdb_default_target_compile): Use tail name
+	of $destfile as the output name of compile.  Move the
+	generated file to $destfile on build.
+
+2013-07-18  Yao Qi  <yao@codesourcery.com>
+
+	* lib/gdb.exp (gdb_compile): Set
+	gdb_saved_set_unbuffered_mode_obj to
+	set_unbuffered_mode_saved.o if host is remote.  Invoke
+	remote_download to copy $unbuf_obj to host.
+
+2013-07-17  Doug Evans  <dje@google.com>
+
+	* gdb.python/py-frame-args.c: New file.
+	* gdb.python/py-frame-args.py: New file.
+	* gdb.python/py-frame-args.exp New file.
+
 2013-07-16  Andrew Burgess  <aburgess@broadcom.com>
 
 	* gdb.base/printcmds.exp (test_printf): Add tests for format

@@ -1,3 +1,375 @@
+2013-07-31  Pedro Alves  <pedro@codesourcery.com>
+	    Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c (trace_dump_command): Select the current frame.
+
+2013-07-30  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (process_queue): Add type signature to debug output.
+
+2013-07-30  Andrew Burgess  <aburgess@broadcom.com>
+
+	* value.c (value_fetch_lazy): Mark optimized out values as such
+	rather than raising an error.
+
+2013-07-30  Andrew Burgess  <aburgess@broadcom.com>
+
+	* value.c (value_fetch_lazy): Ensure parent value is not lazy
+	before checking which bits of the parent, not the child, value are
+	valid.
+
+2013-07-30  Muhammad Bilal  <mbilal@codesorcery.com>
+
+	PR gdb/15715
+	* top.c: Include "filenames.h".
+	(set_history_filename): New function.
+	(init_main): Install it as set hook of the "set history filename"
+	command.
+
+2013-07-30  Sanimir Agovic  <sanimir.agovic@intel.com>
+
+	* dwarf2read.c (dwarf2_get_ref_die_offset): Constify struct
+	attribute parameter.
+	(dwarf2_const_value_data): Constify struct attribute parameter.
+	(dwarf2_const_value): Constify struct attribute parameter.
+	(dwarf2_const_value_attr): Constify struct attribute parameter.
+	(lookup_die_type): Constify struct attribute parameter.
+	(dwarf2_get_attr_constant_value): Constify struct attribute parameter.
+	(follow_die_ref_or_sig): Constify struct attribute parameter.
+	(follow_die_ref): Constify struct attribute parameter.
+	(follow_die_sig): Constify struct attribute parameter.
+	(get_DW_AT_signature_type): Constify struct attribute parameter.
+	(get_type_unit_group): Constify struct attribute parameter.
+	(fill_in_loclist_baton): Constify struct attribute parameter.
+	(dwarf2_symbol_mark_computed): Constify struct attribute parameter.
+	(type_unit_group): Constify struct attribute parameter.
+
+2013-07-30  Sanimir Agovic  <sanimir.agovic@intel.com>
+
+	* dwarf2read.c (attr_form_is_block): Make argument const.
+	(attr_form_is_section_offset): Make argument const.
+	(attr_form_is_constant): Make argument const.
+	(attr_form_is_ref): Make argument const.
+
+2013-07-30  Sanimir Agovic  <sanimir.agovic@intel.com>
+
+	* dwarf2read.c (attr_is_ref): Rename to attr_form_is_ref.
+	All uses updated.
+	(attr_form_is_ref): Moved below attr_form_is_constant.
+
+2013-07-29  Doug Evans  <dje@google.com>
+
+	* main.c (captured_command_loop): Tweak comment.
+
+	* target.c (target_async_permitted_1): Fix comment.
+
+	* symtab.c (iterate_over_some_symtabs): Add comment.
+
+	* symtab.c (iterate_over_some_symtabs): Fix indentation.
+
+2013-07-27  Yao Qi  <yao@codesourcery.com>
+
+	* NEWS: Mention that GDBserver now supports hardware
+	watchpoints on the MIPS GNU/Linux target.
+
+2013-07-27  Yao Qi  <yao@codesourcery.com>
+
+	* Makefile.in (HFILES_NO_SRCDIR): Add
+	common/mips-linux-watch.h.
+	(mips-linux-watch.o): New rule.
+	* common/mips-linux-watch.c: New.
+	* common/mips-linux-watch.h: New.
+	* config/mips/linux.mh (NATDEPFILES): Add mips-linux-watch.o
+	* mips-linux-nat.c: Include mips-linux-watch.h.
+	(W_BIT, R_BIT, I_BIT, W_MASK, R_MASK, I_MASK, IRW_MASK): Move
+	to common/mips-linux-watch.h.
+	(MAX_DEBUG_REGISTER): Likewise.
+	(enum pt_watch_style): Likewise.
+	(struct mips32_watch_regs): Likewise.
+	(struct mips64_watch_regs): Likewise.
+	(struct pt_watch_regs): Likewise.
+	(struct mips_watchpoint): Likewise.
+	(mips_linux_watch_get_irw_mask): Move to
+	common/mips-linux-watch.c.
+	(get_reg_mask, mips_linux_watch_get_num_valid): Likewise.
+	(mips_linux_watch_get_watchlo): Likewise.
+	(mips_linux_watch_set_watchlo): Likewise.
+	(mips_linux_watch_get_watchhi): Likewise.
+	(mips_linux_watch_set_watchhi): Likewise.
+	(mips_linux_read_watch_registers): Likewise.
+	(mips_linux_watch_type_to_irw): Likewise.
+	(mips_linux_stopped_data_address, fill_mask): Likewise.
+	(mips_linux_watch_try_one_watch): Likewise.
+	(mips_linux_watch_populate_regs): Likewise.
+
+2013-07-27  Yao Qi  <yao@codesourcery.com>
+
+	* mips-linux-nat.c (get_irw_mask): Rename to ...
+	(mips_linux_watch_get_irw_mask): ... this.  Rename parameter
+	'set' to 'n'.  Update function comment.  All callers changed.
+	(get_reg_mask): Rename parameter 'set' to 'n'.  Update
+	function comment.  All callers changed.
+	(get_num_valid): Rename to ...
+	(mips_linux_watch_get_num_valid): ... this.  Rename parameter
+	'set' to 'n'.  Update function comment.  All callers changed.
+	(get_watchlo): Rename to ...
+	(mips_linux_watch_get_watchlo): ... this.  Rename parameter
+	'set' to 'n'.  Update function comment.  All callers changed.
+	(set_watchlo): Rename to ...
+	(mips_linux_watch_set_watchlo): ... this.  Rename parameter
+	'set' to 'n'.  Update function comment.  All callers changed.
+	(get_watchhi): Rename to ...
+	(mips_linux_watch_get_watchhi): ... this.  Update function
+	comment.  All callers changed.
+	(set_watchhi): Rename to ...
+	(mips_linux_watch_set_watchhi): ... this.  Update function
+	comment.  All callers changed.
+	(mips_linux_read_watch_registers): Update function comment.
+	Add new parameters 'lwpid', 'watch_readback', and
+	'watch_readback_valid'.  Update.
+	(type_to_irw): Rename to ...
+	(mips_linux_watch_type_to_irw): ... this.  Update function
+	comment.  All callers changed.
+	(fill_mask): Update function comment.
+	(try_one_watch): Rename to ...
+	(mips_linux_watch_try_one_watch): ... this.  Change the type
+	of parameter 'irw' from 'unsigned' to 'uint32_t'.
+	(populate_regs_from_watches): Rename to ...
+	(mips_linux_watch_populate_regs): ... this.  Add parameter
+	'current_watches'.  All callers changed.
+
+2013-07-27  Yao Qi  <yao@codesourcery.com>
+
+	* mips-linux-nat.c (MAX_DEBUG_REGISTER): Move it earlier in
+	the code.
+	(PTRACE_SET_WATCH_REGS, enum pt_watch_style): Remove.
+	(struct mips32_watch_regs, struct mips64_watch_regs): Remove.
+	(struct pt_watch_regs): Likewise.
+	[!PTRACE_GET_WATCH_REGS] (PTRACE_SET_WATCH_REGS): New macro.
+	[!PTRACE_GET_WATCH_REGS] (enum pt_watch_style): New.
+	[!PTRACE_GET_WATCH_REGS] (struct mips32_watch_regs): New.
+	[!PTRACE_GET_WATCH_REGS] (struct mips64_watch_regs): New.
+	[!PTRACE_GET_WATCH_REGS] (struct pt_watch_regs): New.
+
+2013-07-27  Yao Qi  <yao@codesourcery.com>
+
+	* breakpoint.h: Include break-common.h.
+	(enum target_hw_bp_type): Move to ...
+	* common/break-common.h: ... here.  New.
+
+2013-07-26  Cyril Nikolaev  <cyril@nichtverstehen.de>
+
+	* inflow.c (terminal_init_inferior_with_pgrp): Save inferior
+	process group regardless of having tty on stdin.
+
+2013-07-25  Doug Evans  <dje@google.com>
+
+	* linux-fork.h (detach_fork): Delete.
+
+2013-07-25  Tom Tromey  <tromey@redhat.com>
+
+	PR remote/15256, PR remote/15266:
+	* bfd-target.c (target_bfd_reopen): Initialize to_magic.
+	* monitor.c (monitor_detach): Use unpush_target.
+	* remote-m32r-sdi.c (m32r_detach): Use unpush_target.
+	* remote-mips.c (mips_detach): Use unpush_target.  Don't
+	call mips_close.
+	* remote-sim.c (gdbsim_detach): Use unpush_target.
+	* target.c (pop_target): Remove.
+	(pop_all_targets_above): Don't call target_close.
+	(target_close): Assert that the target is unpushed.
+	* target.h (pop_target): Don't declare.
+	* tracepoint.c (tfile_open): Use unpush_target.
+
+2013-07-25  Tom Tromey  <tromey@redhat.com>
+
+	* linux-thread-db.c (init_thread_db_ops): Call
+	complete_target_initialization.
+	(_initialize_thread_db): Don't call add_target.
+	* target.c (complete_target_initialization): New function.
+	(add_target_with_completer): Call it.
+	* target.h (complete_target_initialization): Declare.
+
+2013-07-25  Mark Kettenis  <kettenis@gnu.org>
+
+	* hppa-tdep.h (enum hppa_regnum): Add members for all space registers.
+	* hppaobsd-tdep.c (HPPAOBSD_SIZEOF_GREGS): Add comment.
+	(HPPANBSD_SIZEOF_GREGS): New define.
+	(hppaobsd_supply_gregset): Handle additional registers.
+	* hppabsd-nat.c (hppabsd_gregset_supplies_p): Adjust to indicate
+	we provide more registers now.
+	(hppabsd_supply_gregset): Supply additional registers.
+	(hppabsd_collect_gregset): Collect additional registers.
+
+2013-07-25  Mark Kettenis  <kettenis@gnu.org>
+
+	* hppabsd-tdep.c: Include "dwarf2-frame.h".
+	(hppabsd_dwarf2_frame_init_reg): New function.
+	(hppabsd_init_abi): Hook in the DWARF CFI frame unwinder.
+
+2013-07-25  Andrew Burgess  <aburgess@broadcom.com>
+
+	* mi/mi-main.c (output_register): Make MI 'r' format use standard
+	'z' format code.  Remove error for optimized out values, standard
+	code will handle these fine.
+
+2013-07-25  Andrew Burgess  <aburgess@broadcom.com>
+
+	* NEWS: Mention new 'z' formatter.
+	* printcmd.c (print_scalar_formatted): Add new 'z' formatter.
+	(_initialize_printcmd): Mention 'z' formatter in help text of the
+	'x' command.
+
+2013-07-24  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips-tdep.c (micromips_deal_with_atomic_sequence): Correct
+	formatting.
+
+2013-07-24  Sergio Durigan Junior  <sergiodj@redhat.com>
+
+	* breakpoint.c (create_longjmp_master_breakpoint): Check if probe
+	interface can evaluate arguments.  Fallback to the old mode if it
+	cannot.
+	(create_exception_master_breakpoint): Likewise.
+	* elfread.c (elf_can_evaluate_probe_arguments): New function.
+	(struct sym_probe_fns elf_probe_fns): Export function above to the
+	probe interface.
+	* probe.c (can_evaluate_probe_arguments): New function.
+	* probe.h (struct probe_ops) <can_evaluate_probe_arguments>: New
+	function pointer.
+	(can_evaluate_probe_arguments): New function prototype.
+	* solib-svr4.c (svr4_create_solib_event_breakpoints): Check if
+	probe interface can evaluate arguments.  Fallback to the old mode
+	if it cannot.
+	* stap-probe.c (stap_get_probe_argument_count): Check if probe
+	interface can evaluate arguments.  Warning the user if it cannot.
+	(stap_can_evaluate_probe_arguments): New function.
+	(struct probe_ops stap_probe_ops): Export function above to the
+	probe interface.
+	* symfile.h (struct sym_probe_fns) <can_evaluate_probe_arguments>:
+	New function pointer.
+
+2013-07-24  Luis Machado  <lgustavo@codesourcery.com>
+
+	* Makefile.in (SFILES): Add common/target-common.c.
+	Add common/target-common.h to headers.
+	(COMMON_OBS): Add target-common.o.
+	(target-common.o): New target.
+	* linux-nat.h (resume_kind): Move to common/target-common.h.
+	* target.c (target_waitstatus_to_string): Move to
+	common/target-common.c.
+	* target.h: Include target-common.h.
+	(target_waitkind): Move to common/target-common.h.
+	(target_waitstatus): Likewise.
+	(TARGET_WNOHANG): Likewise.
+	* common/target-common.c: New file.
+	* common/target-common.h: New file.
+
+2013-07-24  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (lookup_dwo_cutu): Change missing DWO complaint to
+	a warning.
+
+2013-07-23  Yao Qi  <yao@codesourcery.com>
+
+	* i386-tdep.c (i386_in_stack_tramp_p): Remove unused
+	parameter 'gdbarch'.
+	(i386_stack_tramp_frame_sniffer): Caller update.
+	* i386-linux-tdep.c (i386_linux_core_read_xcr0): Remove
+	parameter 'gdbarch' and 'target'.
+	(i386_linux_core_read_description): Caller update.
+	* amd64-linux-tdep.c (amd64_linux_core_read_description):
+	Likewise.
+	* i386-linux-tdep.h (i386_linux_core_read_xcr0): Update
+	declaration.
+
+2013-07-23  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2read.c (init_cutu_and_read_dies): Revert patch from
+	2013-07-22.
+
+2013-07-22  Doug Evans  <dje@google.com>
+
+	* exec.h (remove_target_sections): Delete arg abfd.
+	* exec.c (exec_close): Update call to remove_target_sections.
+	(remove_target_sections): Delete arg abfd.
+	* solib.c (update_solib_list): Ditto.
+	(reload_shared_libraries_1): Ditto.
+	(clear_solib): Ditto, and unconditionally call remove_target_sections.
+	* target.h (struct target_section): Rename key to owner.
+	All uses updated.
+
+2013-07-22  Tom Tromey  <tromey@redhat.com>
+
+	* solib-som.c (som_open_symbol_file_object): Call do_cleanups.
+
+2013-07-22  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2read.c (init_cutu_and_read_dies): Remove 'free_cu_cleanup'.
+	Simplify cleanup handling.
+
+2013-07-22  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2read.c (dwarf_decode_line_header): Call do_cleanups
+	on all return paths.
+
+2013-07-22  Edjunior Barbosa Machado  <emachado@linux.vnet.ibm.com>
+
+	* ppc-linux-nat.c (PPC_DEBUG_FEATURE_DATA_BP_DAWR): New define.
+	(ppc_linux_region_ok_for_hw_watchpoint): Add checking to use the new
+	DAWR interface for longer ranges hardware watchpoint (up to 512 bytes).
+
+2013-07-22  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* top.c (print_gdb_version): Add help, apropos description and
+	url to online documentation.
+
+2013-07-19  Hui Zhu  <hui@codesourcery.com>
+
+	PR gdb/15692
+	* mi/mi-cmd-break.c (mi_argv_to_format): Handle double quotes.
+
+2013-07-19  Yao Qi  <yao@codesourcery.com>
+
+	* target.c (update_current_target): Change the default action
+	of 'to_traceframe_info' from tcomplain to return_zero.
+	* target.h (struct target_ops) <to_traceframe_info>: Add more
+	comments.
+	* valops.c (read_value_memory): Call
+	traceframe_available_memory unconditionally.
+
+2013-07-18  Yao Qi  <yao@codesourcery.com>
+
+	* coffread.c (coff_symfile_read): Iterate over minimal symbols,
+	if the name is prefixed by "__imp_" or "_imp_", look for minimal
+	symbol without prefix.  If found, set its type to
+	'mst_solib_trampoline'.
+
+2013-07-17  Doug Evans  <dje@google.com>
+
+	* NEWS: Mention "set print raw frame-arguments".
+	* gdbcmd.h (setprintrawlist, showprintrawlist): Declare.
+	* stack.c (print_raw_frame_arguments): New static global.
+	(print_frame_arg): Set opts.raw from print_raw_frame_arguments.
+	(_initialize_stack): New command "set/show print raw frame-arguments".
+	* valprint.c (setprintrawlist, showprintrawlist): New globals.
+	(set_print_raw, show_print_raw): New functions.
+	(_initialize_valprint): New prefix command "set/show print raw".
+	* valprint.h (value_print_options): Improve comments.
+
+	* cli/cli-cmds.c (init_cmd_lists): Delete unnecessary initialization
+	of all *list variables.
+
+	* gdbcmd.h (togglelist): Delete.
+	* cli/cli-cmds.c (togglelist): Delete.
+	(init_cmd_lists): Update.
+	* cli/cli-cmds.h (togglelist): Delete.
+
+2013-07-17  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2read.c (dwarf2_per_objfile_free): Clear
+	dwarf2_per_objfile.
+
 2013-07-16  Doug Evans  <dje@google.com>
 
 	* nto-tdep.c (nto_relocate_section_addresses): Update,

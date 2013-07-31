@@ -3065,6 +3065,12 @@ trace_dump_command (char *args, int from_tty)
 		   tracepoint_number, traceframe_number);
 
   old_chain = make_cleanup (null_cleanup, NULL);
+
+  /* This command only makes sense for the current frame, not the
+     selected frame.  */
+  make_cleanup_restore_current_thread ();
+  select_frame (get_current_frame ());
+
   actions = all_tracepoint_actions_and_cleanup (loc->owner);
 
   trace_dump_actions (actions, 0, stepping_frame, from_tty);
@@ -4366,8 +4372,8 @@ tfile_open (char *filename, int from_tty)
     }
   if (ex.reason < 0)
     {
-      /* Pop the partially set up target.  */
-      pop_target ();
+      /* Remove the partially set up target.  */
+      unpush_target (&tfile_ops);
       throw_exception (ex);
     }
 

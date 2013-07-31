@@ -157,7 +157,8 @@ SFILES=	$(srcdir)/gdbreplay.c $(srcdir)/inferiors.c $(srcdir)/dll.c \
 	$(srcdir)/common/common-utils.c $(srcdir)/common/xml-utils.c \
 	$(srcdir)/common/linux-osdata.c $(srcdir)/common/ptid.c \
 	$(srcdir)/common/buffer.c $(srcdir)/common/linux-btrace.c \
-	$(srcdir)/common/filestuff.c
+	$(srcdir)/common/filestuff.c $(srcdir)/common/target-common.c \
+    $(srcdir)/common/mips-linux-watch.c
 
 DEPFILES = @GDBSERVER_DEPFILES@
 
@@ -166,13 +167,11 @@ LIBOBJS = @LIBOBJS@
 SOURCES = $(SFILES)
 TAGFILES = $(SOURCES) ${HFILES} ${ALLPARAM} ${POSSLIBS}
 
-OBS = agent.o ax.o inferiors.o regcache.o remote-utils.o server.o signals.o target.o \
-	utils.o version.o vec.o gdb_vecs.o \
-	mem-break.o hostio.o event-loop.o tracepoint.o \
-	xml-utils.o common-utils.o ptid.o buffer.o format.o filestuff.o \
-	dll.o notif.o tdesc.o \
-	$(XML_BUILTIN) \
-	$(DEPFILES) $(LIBOBJS)
+OBS = agent.o ax.o inferiors.o regcache.o remote-utils.o server.o signals.o \
+      target.o target-common.o utils.o version.o vec.o gdb_vecs.o \
+      mem-break.o hostio.o event-loop.o tracepoint.o xml-utils.o \
+      common-utils.o ptid.o buffer.o format.o filestuff.o dll.o notif.o \
+      tdesc.o $(XML_BUILTIN) $(DEPFILES) $(LIBOBJS)
 GDBREPLAY_OBS = gdbreplay.o version.o
 GDBSERVER_LIBS = @GDBSERVER_LIBS@
 XM_CLIBS = @LIBS@
@@ -438,6 +437,7 @@ server_h = $(srcdir)/server.h $(regcache_h) $(srcdir)/target.h \
 		$(srcdir)/../common/buffer.h \
 		$(srcdir)/../common/gdb_assert.h \
 		$(srcdir)/../common/gdb_locale.h \
+		$(srcdir)/../common/target-common.h \
 		$(ptid_h) \
 		$(signals_h) \
 		$(libiberty_h) \
@@ -456,6 +456,8 @@ linux_procfs_h = $(srcdir)/../common/linux-procfs.h
 lynx_low_h = $(srcdir)/lynx-low.h $(srcdir)/server.h
 
 nto_low_h = $(srcdir)/nto-low.h
+
+mips_linux_watch_h = $(srcdir)/../common/mips-linux-watch.h
 
 UST_CFLAGS = $(ustinc) -DCONFIG_UST_GDB_INTEGRATION
 
@@ -548,8 +550,14 @@ filestuff.o: ../common/filestuff.c
 agent.o: ../common/agent.c
 	$(COMPILE) $<
 	$(POSTCOMPILE)
+target-common.o: ../common/target-common.c
+	$(COMPILE) $<
+	$(POSTCOMPILE)
 
 linux-btrace.o: ../common/linux-btrace.c $(linux_btrace_h) $(server_h)
+	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $<
+
+mips-linux-watch.o: ../common/mips-linux-watch.c $(mips_linux_watch_h) $(server_h)
 	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $<
 
 # We build vasprintf with -DHAVE_CONFIG_H because we want that unit to

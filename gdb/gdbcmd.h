@@ -55,10 +55,6 @@ extern struct cmd_list_element *detachlist;
 
 extern struct cmd_list_element *killlist;
 
-/* Chain containing all defined toggle subcommands.  */
-
-extern struct cmd_list_element *togglelist;
-
 /* Chain containing all defined stop subcommands.  */
 
 extern struct cmd_list_element *stoplist;
@@ -115,6 +111,10 @@ extern struct cmd_list_element *maintenance_dwarf2_list;
 extern struct cmd_list_element *setprintlist;
 
 extern struct cmd_list_element *showprintlist;
+
+extern struct cmd_list_element *setprintrawlist;
+
+extern struct cmd_list_element *showprintrawlist;
 
 extern struct cmd_list_element *setprinttypelist;
 
