@@ -21785,7 +21785,7 @@ attr_to_dwarf2_prop (struct type *type, struct die_info *die,
       prop->kind = DWARF_LOCEXPR;
       gdb_assert (prop->data.locexpr != NULL);
     }
-  else if (is_ref_attr (attr))
+  else if (attr_form_is_ref (attr))
     {
       struct dwarf2_loclist_baton *baton;
 
