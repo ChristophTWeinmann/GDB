@@ -3310,12 +3310,49 @@ recursive_dump_type (struct type *type, int spaces)
     }
   if (TYPE_CODE (type) == TYPE_CODE_RANGE)
     {
-      printfi_filtered (spaces, "low %s%s  high %s%s\n",
-			plongest (TYPE_LOW_BOUND (type)), 
-			TYPE_LOW_BOUND_UNDEFINED (type) ? " (undefined)" : "",
-			plongest (TYPE_HIGH_BOUND (type)),
-			TYPE_HIGH_BOUND_UNDEFINED (type) 
-			? " (undefined)" : "");
+      printfi_filtered (spaces, "low");
+      switch (TYPE_LOW_BOUND_KIND (type))
+        {
+          case DWARF_LOCEXPR:
+            printf_filtered (" (expression) ");
+            gdb_print_host_address (TYPE_LOW_BOUND_BLOCK (type), gdb_stdout);
+            break;
+          case DWARF_LOCLIST:
+            printf_filtered (" (reference) ");
+            gdb_print_host_address (TYPE_LOW_BOUND_LOCLIST (type), gdb_stdout);
+            break;
+          case DWARF_CONST:
+            printf_filtered (" (const) ");
+            printfi_filtered (spaces, "%s", plongest (TYPE_LOW_BOUND (type)));
+            break;
+          default:
+            if (TYPE_LOW_BOUND_UNDEFINED (type))
+              printfi_filtered (spaces, "(undefined)");
+            break;
+        }
+      puts_filtered ("\n");
+
+      printfi_filtered (spaces, "high");
+      switch (TYPE_HIGH_BOUND_KIND (type))
+        {
+          case DWARF_LOCEXPR:
+            printf_filtered (" (expression) ");
+            gdb_print_host_address (TYPE_HIGH_BOUND_BLOCK (type), gdb_stdout);
+            break;
+          case DWARF_LOCLIST:
+            printf_filtered (" (reference) ");
+            gdb_print_host_address (TYPE_HIGH_BOUND_LOCLIST (type), gdb_stdout);
+            break;
+          case DWARF_CONST:
+            printf_filtered (" (const) ");
+            printfi_filtered (spaces, "%s", plongest (TYPE_HIGH_BOUND (type)));
+            break;
+          default:
+            if (TYPE_HIGH_BOUND_UNDEFINED (type))
+              printfi_filtered (spaces, "(undefined)");
+            break;
+        }
+      puts_filtered ("\n");
     }
   printfi_filtered (spaces, "vptr_basetype ");
   gdb_print_host_address (TYPE_VPTR_BASETYPE (type), gdb_stdout);
@@ -3375,6 +3412,9 @@ recursive_dump_type (struct type *type, int spaces)
 	/* tail_call_list is not printed.  */
 	break;
     }
+
+  printfi_filtered (spaces, "allocated %d\n", TYPE_ALLOCATED (type));
+  printfi_filtered (spaces, "associated %d\n", TYPE_ASSOCIATED (type));
 
   if (spaces == 0)
     obstack_free (&dont_print_type_obstack, NULL);
