@@ -13053,12 +13053,12 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
           gdb_assert (length_location != NULL);
 
           TYPE_HIGH_BOUND_BLOCK (range_type) = length_location;
-          TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_BLK;
+          TYPE_HIGH_BOUND_KIND (range_type) = DWARF_LOCEXPR;
         }
       else
         {
           TYPE_HIGH_BOUND (range_type) = DW_UNSND (attr);
-          TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_CONST;
+          TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
         }
     }
   else
@@ -13076,18 +13076,18 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
               gdb_assert (length_location != NULL);
 
               TYPE_HIGH_BOUND_BLOCK (range_type) = length_location;
-              TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_BLK;
+              TYPE_HIGH_BOUND_KIND (range_type) = DWARF_LOCEXPR;
             }
           else
           {
             TYPE_HIGH_BOUND (range_type) = DW_UNSND (attr);
-            TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_CONST;
+            TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
           }
         }
       else
         {
           TYPE_HIGH_BOUND (range_type) = 1;
-          TYPE_BOUND_CHARACTERISTIC (range_type) = BOUND_CONST;
+          TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
         }
     }
 

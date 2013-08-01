@@ -624,23 +624,10 @@ struct main_type
 
     struct range_bounds
     {
-      /* Characteristic of bound information currently used by type.  */
-      enum
-      {
-        BOUND_CONST,
-        BOUND_BLK,
-        BOUND_LOCLST
-      } characteristic;
-
       /* Low and high bound container to store static bounds and dynamic bounds
          of range.  */
 
-      union bounds_container
-      {
-        LONGEST bound_const;
-        struct dwarf2_locexpr_baton *bound_block;
-        struct dwarf2_loclist_baton *bound_locationlist;
-      } low, high;
+      struct dwarf2_prop low, high;
 
       /* Flags indicating whether the values of low and high are
          valid.  When true, the respective range value is
@@ -1135,19 +1122,21 @@ extern void allocate_gnat_aux_type (struct type *);
 #define TYPE_INDEX_TYPE(type) TYPE_FIELD_TYPE (type, 0)
 #define TYPE_RANGE_DATA(thistype) TYPE_MAIN_TYPE(thistype)->flds_bnds.bounds
 #define TYPE_LOW_BOUND(range_type) \
-  TYPE_RANGE_DATA(range_type)->low.bound_const
+  TYPE_RANGE_DATA(range_type)->low.data.const_val
 #define TYPE_HIGH_BOUND(range_type) \
-  TYPE_RANGE_DATA(range_type)->high.bound_const
+  TYPE_RANGE_DATA(range_type)->high.data.const_val
 #define TYPE_LOW_BOUND_BLOCK(range_type) \
-  TYPE_RANGE_DATA(range_type)->low.bound_block
+  TYPE_RANGE_DATA(range_type)->low.data.locexpr
 #define TYPE_HIGH_BOUND_BLOCK(range_type) \
-  TYPE_RANGE_DATA(range_type)->high.bound_block
+  TYPE_RANGE_DATA(range_type)->high.data.locexpr
 #define TYPE_LOW_BOUND_LOCLIST(range_type) \
-  TYPE_RANGE_DATA(range_type)->low.bound_locationlist
+  TYPE_RANGE_DATA(range_type)->low.data.loclist
 #define TYPE_HIGH_BOUND_LOCLIST(range_type) \
-  TYPE_RANGE_DATA(range_type)->high.bound_locationlist
-#define TYPE_BOUND_CHARACTERISTIC(range_type) \
-  TYPE_RANGE_DATA(range_type)->characteristic
+  TYPE_RANGE_DATA(range_type)->high.data.loclist
+#define TYPE_HIGH_BOUND_KIND(range_type) \
+  TYPE_RANGE_DATA(range_type)->high.kind
+#define TYPE_LOW_BOUND_KIND(range_type) \
+  TYPE_RANGE_DATA(range_type)->low.kind
 #define TYPE_LOW_BOUND_UNDEFINED(range_type) \
    TYPE_RANGE_DATA(range_type)->low_undefined
 #define TYPE_HIGH_BOUND_UNDEFINED(range_type) \
