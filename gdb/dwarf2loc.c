@@ -4244,7 +4244,7 @@ dwarf2_disassemble (struct ui_file *stream, struct dwarf2_locexpr_baton *baton)
   unsigned int addr_size = dwarf2_per_cu_addr_size (baton->per_cu);
   int offset_size = dwarf2_per_cu_offset_size (baton->per_cu);
 
-  disassemble_dwarf_expression (gdb_stdout,
+  disassemble_dwarf_expression (stream,
 				get_objfile_arch (objfile),
 				addr_size, offset_size,
 				baton->data, baton->data,
@@ -4269,8 +4269,6 @@ maintenance_dwarf2_vla_command (char *arg, int from_tty)
   struct type *type;
   CORE_ADDR context_pc = 0;
   struct field_of_this_result is_a_field_of_this;
-  struct obj_section *section;
-  struct dwarf2_locexpr_baton *baton;
 
   if (arg == NULL)
     error (_("Argument required."));
