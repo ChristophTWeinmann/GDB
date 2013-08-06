@@ -15,10 +15,10 @@
 
 standard_testfile "vla.f90"
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug f90 quiet}] != "" } {
-    untested "Couldn't compile ${srcfile}"
+if { [prepare_for_testing ${testfile}.exp ${testfile} ${srcfile} {debug f90 quiet}] } {
     return -1
 }
+
 
 gdb_exit
 gdb_start

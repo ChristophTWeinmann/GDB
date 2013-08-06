@@ -16,7 +16,6 @@
 standard_testfile "vla-sub.f90"
 
 if { [prepare_for_testing ${testfile}.exp ${testfile} ${srcfile} {debug f90 quiet}] } {
-    untested ${testfile}.exp
     return -1
 }
 
