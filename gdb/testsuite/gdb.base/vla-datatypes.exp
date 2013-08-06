@@ -15,12 +15,10 @@
 
 standard_testfile ".c"
 if { [prepare_for_testing ${testfile}.exp ${testfile} ${srcfile}] } {
-    untested ${testfile}.exp
     return -1
 }
 
 if ![runto_main] {
-    untested ${testfile}.exp
     return -1
 }
 
@@ -45,10 +43,10 @@ gdb_test "whatis int_vla" "type = int \\\[variable\\\]" "whatis int_vla"
 gdb_test "whatis unsigned_int_vla" "type = unsigned int \\\[variable\\\]" "whatis unsigned_int_vla"
 gdb_test "whatis double_vla" "type = double \\\[variable\\\]" "whatis double_vla"
 gdb_test "whatis float_vla" "type = float \\\[variable\\\]" "whatis float_vla"
-gdb_test "whatis long_vla" "type = (long int|long) \\\[variable\\\]" "whatis long_vla"
+gdb_test "whatis long_vla" "type = long( int)? \\\[variable\\\]" "whatis long_vla"
 gdb_test "whatis unsigned_long_vla" "type = (long unsigned int|unsigned long) \\\[variable\\\]" "whatis unsigned_long_vla"
 gdb_test "whatis char_vla" "type = char \\\[variable\\\]" "whatis char_vla"
-gdb_test "whatis short_vla" "type = (short int|short) \\\[variable\\\]" "whatis short_vla"
+gdb_test "whatis short_vla" "type = short( int)? \\\[variable\\\]" "whatis short_vla"
 gdb_test "whatis unsigned_short_vla" "type = (short unsigned int|unsigned short) \\\[variable\\\]" "whatis unsigned_short_vla"
 gdb_test "whatis unsigned_char_vla" "type = unsigned char \\\[variable\\\]" "whatis unsigned_char_vla"
 gdb_test "whatis foo_vla" "type = struct foo \\\[variable\\\]" "whatis foo_vla"
@@ -59,10 +57,10 @@ gdb_test "ptype int_vla" "type = int \\\[5\\\]" "ptype int_vla"
 gdb_test "ptype unsigned_int_vla" "type = unsigned int \\\[5\\\]" "ptype unsigned_int_vla"
 gdb_test "ptype double_vla" "type = double \\\[5\\\]" "ptype double_vla"
 gdb_test "ptype float_vla" "type = float \\\[5\\\]" "ptype float_vla"
-gdb_test "ptype long_vla" "type = long int \\\[5\\\]" "ptype long_vla"
+gdb_test "ptype long_vla" "type = long( int)? \\\[5\\\]" "ptype long_vla"
 gdb_test "ptype unsigned_long_vla" "type = long unsigned int \\\[5\\\]" "ptype unsigned_long_vla"
 gdb_test "ptype char_vla" "type = char \\\[5\\\]" "ptype char_vla"
-gdb_test "ptype short_vla" "type = short int \\\[5\\\]" "ptype short_vla"
+gdb_test "ptype short_vla" "type = short( int)? \\\[5\\\]" "ptype short_vla"
 gdb_test "ptype unsigned_short_vla" "type = short unsigned int \\\[5\\\]" "ptype unsigned_short_vla"
 gdb_test "ptype unsigned_char_vla" "type = unsigned char \\\[5\\\]" "ptype unsigned_char_vla"
 gdb_test "ptype foo_vla" "type = struct foo {\r\n\\s+int a;\r\n} \\\[5\\\]" "ptype foo_vla"
