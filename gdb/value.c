@@ -3267,6 +3267,51 @@ value_from_history_ref (char *h, char **endp)
   return access_value_history (index);
 }
 
+
+/* Helper function for value_at and value_at_lazy.  */
+
+static struct value *
+get_value_at (struct type *type, CORE_ADDR addr, int lazy)
+{
+  struct value *val;
+
+  if (TYPE_CODE (check_typedef (type)) == TYPE_CODE_VOID)
+    error (_("Attempt to dereference a generic pointer."));
+
+  val = value_from_contents_and_address (type, NULL, addr);
+
+  if (!lazy)
+    value_fetch_lazy (val);
+
+  return val;
+}
+
+/* Return a value with type TYPE located at ADDR.
+
+   Call value_at only if the data needs to be fetched immediately;
+   if we can be 'lazy' and defer the fetch, perhaps indefinately, call
+   value_at_lazy instead.  value_at_lazy simply records the address of
+   the data and sets the lazy-evaluation-required flag.  The lazy flag
+   is tested in the value_contents macro, which is used if and when
+   the contents are actually required.
+
+   Note: value_at does *NOT* handle embedded offsets; perform such
+   adjustments before or after calling it.  */
+
+struct value *
+value_at (struct type *type, CORE_ADDR addr)
+{
+  return get_value_at (type, addr, 0);
+}
+
+/* Return a lazy value with type TYPE located at ADDR (cf. value_at).  */
+
+struct value *
+value_at_lazy (struct type *type, CORE_ADDR addr)
+{
+  return get_value_at (type, addr, 1);
+}
+
 struct value *
 coerce_ref_if_computed (const struct value *arg)
 {
