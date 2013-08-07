@@ -306,6 +306,7 @@ struct dwarf_expr_baton
 {
   struct frame_info *frame;
   struct dwarf2_per_cu_data *per_cu;
+  CORE_ADDR obj_address;
 };
 
 /* Helper functions for dwarf2_evaluate_loc_desc.  */
@@ -1234,9 +1235,14 @@ dwarf_expr_get_addr_index (void *baton, unsigned int index)
 static CORE_ADDR
 dwarf_expr_get_obj_addr (void *baton)
 {
-  struct dwarf2_locexpr_baton *debaton = (struct dwarf2_locexpr_baton *) baton;
+  struct dwarf_expr_baton *debaton = (struct dwarf_expr_baton *) baton;
 
-  return dwarf2_read_obj_addr (debaton);
+  gdb_assert (debaton != NULL);
+
+  if (debaton->obj_address == 0)
+    error (_("Location address is not set."));
+
+  return debaton->obj_address;
 }
 
 /* VALUE must be of type lval_computed with entry_data_value_funcs.  Perform
@@ -2231,6 +2237,7 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
 
   baton.frame = frame;
   baton.per_cu = per_cu;
+  baton.obj_address = 0;
 
   ctx = new_dwarf_expr_context ();
   old_chain = make_cleanup_free_dwarf_expr_context (ctx);
