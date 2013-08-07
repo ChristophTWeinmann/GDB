@@ -1786,7 +1786,7 @@ static struct dwarf2_locexpr_baton* attr_to_locexprbaton_1
    int extra_size);
 
 static int attr_to_dwarf2_prop
-  (struct type *, struct die_info *, struct attribute *, struct dwarf2_cu *,
+  (struct die_info *, struct attribute *, struct dwarf2_cu *,
    struct dwarf2_prop *);
 
 #if WORDS_BIGENDIAN
@@ -20480,7 +20480,7 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
     {
       struct dwarf2_prop prop;
 
-      if (attr_to_dwarf2_prop (type, die, attr, cu, &prop))
+      if (attr_to_dwarf2_prop (die, attr, cu, &prop))
         TYPE_ALLOCATED_PROP (type) = prop;
     }
 
@@ -20490,7 +20490,7 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
     {
       struct dwarf2_prop prop;
 
-      if (attr_to_dwarf2_prop (type, die, attr, cu, &prop))
+      if (attr_to_dwarf2_prop (die, attr, cu, &prop))
         TYPE_ASSOCIATED_PROP (type) = prop;
     }
 
@@ -21774,10 +21774,10 @@ attr_to_locexprbaton_1 (struct attribute *attribute, struct dwarf2_cu *cu,
    resulting value of the attribute into struct dwarf2_prop.  */
 
 static int
-attr_to_dwarf2_prop (struct type *type, struct die_info *die,
-        struct attribute *attr, struct dwarf2_cu *cu, struct dwarf2_prop *prop)
+attr_to_dwarf2_prop (struct die_info *die, struct attribute *attr, struct dwarf2_cu *cu,
+		     struct dwarf2_prop *prop)
 {
-  if (type == NULL || die == NULL || attr == NULL || cu == NULL || prop == NULL)
+  if (die == NULL || attr == NULL || cu == NULL || prop == NULL)
     return 0;
 
   if (attr_form_is_block (attr))
