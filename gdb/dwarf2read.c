@@ -13414,7 +13414,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
   struct type *base_type, *orig_base_type;
   struct type *range_type;
   struct attribute *attr;
-  LONGEST low, high;
+  struct dwarf2_prop low, high;
   int low_default_is_valid;
   const char *name;
   LONGEST negative_mask;
@@ -13431,43 +13431,44 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
   if (range_type)
     return range_type;
 
+  low.kind = DWARF_CONST;
+  high.kind = DWARF_CONST;
+  low.data.const_val = 0;
+  high.data.const_val = 0;
+
   /* Set LOW_DEFAULT_IS_VALID if current language and DWARF version allow
      omitting DW_AT_lower_bound.  */
   switch (cu->language)
     {
     case language_c:
     case language_cplus:
-      low = 0;
+      low.data.const_val = 0;
       low_default_is_valid = 1;
       break;
     case language_fortran:
-      low = 1;
+      low.data.const_val = 1;
       low_default_is_valid = 1;
       break;
     case language_d:
     case language_java:
     case language_objc:
-      low = 0;
+      low.data.const_val = 0;
       low_default_is_valid = (cu->header.version >= 4);
       break;
     case language_ada:
     case language_m2:
     case language_pascal:
-      low = 1;
+      low.data.const_val = 1;
       low_default_is_valid = (cu->header.version >= 4);
       break;
     default:
-      low = 0;
       low_default_is_valid = 0;
       break;
     }
 
-  /* FIXME: For variable sized arrays either of these could be
-     a variable rather than a constant value.  We'll allow it,
-     but we don't know how to handle it.  */
   attr = dwarf2_attr (die, DW_AT_lower_bound, cu);
   if (attr)
-    low = dwarf2_get_attr_constant_value (attr, low);
+    (void)attr_to_dwarf2_prop (die, attr, cu, &low);
   else if (!low_default_is_valid)
     complaint (&symfile_complaints, _("Missing DW_AT_lower_bound "
 				      "- DIE at 0x%x [in module %s]"),
@@ -13475,37 +13476,19 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   attr = dwarf2_attr (die, DW_AT_upper_bound, cu);
   if (attr)
-    {
-      if (attr_form_is_block (attr) || attr_form_is_ref (attr))
-        {
-          /* GCC encodes arrays with unspecified or dynamic length
-             with a DW_FORM_block1 attribute or a reference attribute.
-             FIXME: GDB does not yet know how to handle dynamic
-             arrays properly, treat them as arrays with unspecified
-             length for now.
-
-             FIXME: jimb/2003-09-22: GDB does not really know
-             how to handle arrays of unspecified length
-             either; we just represent them as zero-length
-             arrays.  Choose an appropriate upper bound given
-             the lower bound we've computed above.  */
-          high = low - 1;
-        }
-      else
-        high = dwarf2_get_attr_constant_value (attr, 1);
-    }
+    (void)attr_to_dwarf2_prop (die, attr, cu, &high);
   else
     {
       attr = dwarf2_attr (die, DW_AT_count, cu);
       if (attr)
 	{
 	  int count = dwarf2_get_attr_constant_value (attr, 1);
-	  high = low + count - 1;
+	  high.data.const_val = low.data.const_val + count - 1;
 	}
       else
 	{
 	  /* Unspecified array length.  */
-	  high = low - 1;
+	  high.data.const_val = low.data.const_val - 1;
 	}
     }
 
@@ -13549,12 +13532,23 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   negative_mask =
     (LONGEST) -1 << (TYPE_LENGTH (base_type) * TARGET_CHAR_BIT - 1);
-  if (!TYPE_UNSIGNED (base_type) && (low & negative_mask))
-    low |= negative_mask;
-  if (!TYPE_UNSIGNED (base_type) && (high & negative_mask))
-    high |= negative_mask;
 
-  range_type = create_range_type (NULL, orig_base_type, low, high);
+  if (low.kind == DWARF_CONST)
+    {
+      LONGEST low_bound = low.data.const_val;
+
+      if (!TYPE_UNSIGNED (base_type) && (low_bound & negative_mask))
+	low.data.const_val |= negative_mask;
+    }
+  if (high.kind == DWARF_CONST)
+    {
+      LONGEST high_bound = high.data.const_val;
+
+      if (!TYPE_UNSIGNED (base_type) && (high_bound & negative_mask))
+	high.data.const_val |= negative_mask;
+    }
+
+  range_type = create_range_type_1 (NULL, orig_base_type, &low, &high);
 
   /* Mark arrays with dynamic length at least as an array of unspecified
      length.  GDB could check the boundary but before it gets implemented at
