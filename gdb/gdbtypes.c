@@ -3478,10 +3478,13 @@ type_pair_eq (const void *item_lhs, const void *item_rhs)
 htab_t
 create_copied_types_hash (struct objfile *objfile)
 {
-  return htab_create_alloc_ex (1, type_pair_hash, type_pair_eq,
-			       NULL, &objfile->objfile_obstack,
-			       hashtab_obstack_allocate,
-			       dummy_obstack_deallocate);
+  if (objfile == NULL)
+    return htab_create (1, type_pair_hash, type_pair_eq, xfree);
+  else
+    return htab_create_alloc_ex (1, type_pair_hash, type_pair_eq,
+				 NULL, &objfile->objfile_obstack,
+				 hashtab_obstack_allocate,
+				 dummy_obstack_deallocate);
 }
 
 /* Recursively copy (deep copy) TYPE, if it is associated with
