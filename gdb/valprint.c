@@ -101,6 +101,8 @@ static void set_output_radix (char *, int, struct cmd_list_element *);
 
 static void set_output_radix_1 (int, unsigned);
 
+static void val_print_not_allocated (struct ui_file *stream);
+
 void _initialize_valprint (void);
 
 #define PRINT_MAX_DEFAULT 200	/* Start print_max off at this value.  */
@@ -307,6 +309,12 @@ valprint_check_validity (struct ui_file *stream,
 {
   CHECK_TYPEDEF (type);
 
+  if (TYPE_ALLOCATED_PROP (type) && !TYPE_ALLOCATED (type))
+    {
+      val_print_not_allocated (stream);
+      return 0;
+    }
+
   if (TYPE_CODE (type) != TYPE_CODE_UNION
       && TYPE_CODE (type) != TYPE_CODE_STRUCT
       && TYPE_CODE (type) != TYPE_CODE_ARRAY)
@@ -351,6 +359,12 @@ void
 val_print_invalid_address (struct ui_file *stream)
 {
   fprintf_filtered (stream, _("<invalid address>"));
+}
+
+static void
+val_print_not_allocated (struct ui_file *stream)
+{
+  fprintf_filtered (stream, _("<not allocated>"));
 }
 
 /* A generic val_print that is suitable for use by language
