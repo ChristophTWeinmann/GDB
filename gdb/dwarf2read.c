@@ -1779,14 +1779,14 @@ static void process_cu_includes (void);
 static void check_producer (struct dwarf2_cu *cu);
 
 static struct dwarf2_locexpr_baton* attr_to_locexprbaton
-  (struct attribute *, struct dwarf2_cu *);
+  (const struct attribute *, struct dwarf2_cu *);
 
 static struct dwarf2_locexpr_baton* attr_to_locexprbaton_1
-  (struct attribute *, struct dwarf2_cu *, gdb_byte *additional_data,
+  (const struct attribute *, struct dwarf2_cu *, const gdb_byte *additional_data,
    int extra_size);
 
 static int attr_to_dwarf2_prop
-  (struct die_info *, struct attribute *, struct dwarf2_cu *,
+  (struct die_info *, const struct attribute *, struct dwarf2_cu *,
    struct dwarf2_prop *);
 
 #if WORDS_BIGENDIAN
@@ -13020,7 +13020,7 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
               /* Build new dwarf2_locexpr_baton structure with additions to the
                  data attribute, to reflect DWARF specialities to get address
                  sizes.  */
-              gdb_byte append_ops[] = {
+              const gdb_byte append_ops[] = {
                 /* DW_OP_deref_size: size of an address on the target machine
                    (bytes), where the size will be specified by the next
                    operand.  */
@@ -13029,7 +13029,7 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
                 DW_UNSND (byte_size) };
 
               length_location = attr_to_locexprbaton_1(attr, cu,
-                      append_ops, 2);
+                      append_ops, sizeof (append_ops) / sizeof (append_ops[0]));
             }
           else if (bit_size != NULL && byte_size == NULL)
             {
@@ -13040,13 +13040,13 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
              is the address size of the target machine.  */
           else
             {
-              gdb_byte append_ops[] = {
+              const gdb_byte append_ops[] = {
                 /* DW_OP_deref: size of an address on the target
                    machine (bytes).  */
                 DW_OP_deref };
 
               length_location = attr_to_locexprbaton_1(attr, cu,
-                      append_ops, 1);
+                      append_ops,  sizeof (append_ops) / sizeof (append_ops[0]));
             }
 
           gdb_assert (length_location != NULL);
@@ -13550,7 +13550,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   range_type = create_range_type_1 (NULL, orig_base_type, &low, &high);
 
-  /* Mark arrays with dynamic length at least as an array of unspecified
+  /* tMark arrays with dynamic length at least as an array of unspecified
      length.  GDB could check the boundary but before it gets implemented at
      least allow accessing the array elements.  */
   if (attr && attr_form_is_block (attr))
@@ -21720,14 +21720,14 @@ Usage: save gdb-index DIRECTORY"),
    baton into "dynamic" types, e.g. VLA's.  */
 
 static struct dwarf2_locexpr_baton*
-attr_to_locexprbaton (struct attribute *attribute, struct dwarf2_cu *cu)
+attr_to_locexprbaton (const struct attribute *attribute, struct dwarf2_cu *cu)
 {
   return attr_to_locexprbaton_1 (attribute, cu, NULL, 0);
 }
 
 static struct dwarf2_locexpr_baton*
-attr_to_locexprbaton_1 (struct attribute *attribute, struct dwarf2_cu *cu,
-        gdb_byte *additional_data, int extra_size)
+attr_to_locexprbaton_1 (const struct attribute *attribute, struct dwarf2_cu *cu,
+        const gdb_byte *additional_data, int extra_size)
 {
   struct objfile *objfile = dwarf2_per_objfile->objfile;
   struct dwarf2_locexpr_baton *baton;
@@ -21768,7 +21768,7 @@ attr_to_locexprbaton_1 (struct attribute *attribute, struct dwarf2_cu *cu,
    resulting value of the attribute into struct dwarf2_prop.  */
 
 static int
-attr_to_dwarf2_prop (struct die_info *die, struct attribute *attr, struct dwarf2_cu *cu,
+attr_to_dwarf2_prop (struct die_info *die, const struct attribute *attr, struct dwarf2_cu *cu,
 		     struct dwarf2_prop *prop)
 {
   if (die == NULL || attr == NULL || cu == NULL || prop == NULL)
