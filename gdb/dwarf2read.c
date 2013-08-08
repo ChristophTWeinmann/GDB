@@ -13550,12 +13550,6 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   range_type = create_range_type_1 (NULL, orig_base_type, &low, &high);
 
-  /* tMark arrays with dynamic length at least as an array of unspecified
-     length.  GDB could check the boundary but before it gets implemented at
-     least allow accessing the array elements.  */
-  if (attr && attr_form_is_block (attr))
-    TYPE_HIGH_BOUND_UNDEFINED (range_type) = 1;
-
   /* Ada expects an empty array on no boundary attributes.  */
   if (attr == NULL && cu->language != language_ada)
     TYPE_HIGH_BOUND_UNDEFINED (range_type) = 1;

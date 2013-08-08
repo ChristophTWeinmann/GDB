@@ -3170,6 +3170,11 @@ value_from_contents_and_address (struct type *type,
   else
     v = value_from_contents (type, valaddr);
 
+  /* If TYPE has dynamic values e.g. array bounds, try transforming values to
+     static ones based on the address.  */
+  v->type = resolve_dynamic_values (type, address);
+  v->enclosing_type = v->type;
+
   set_value_address (v, address);
   VALUE_LVAL (v) = lval_memory;
   return v;

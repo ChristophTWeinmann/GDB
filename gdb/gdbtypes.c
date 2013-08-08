@@ -126,6 +126,10 @@ unsigned int overload_debug = 0;
 
 static int strict_type_checking = 1;
 
+/* Prototypes for local functions.  */
+
+static int static_bounds_p (const struct range_bounds *bounds);
+
 /* A function to show whether opaque types are resolved.  */
 
 static void
@@ -978,22 +982,29 @@ create_array_type (struct type *result_type,
 
   TYPE_CODE (result_type) = TYPE_CODE_ARRAY;
   TYPE_TARGET_TYPE (result_type) = element_type;
-  if (get_discrete_bounds (range_type, &low_bound, &high_bound) < 0)
-    low_bound = high_bound = 0;
-  CHECK_TYPEDEF (element_type);
-  /* Be careful when setting the array length.  Ada arrays can be
-     empty arrays with the high_bound being smaller than the low_bound.
-     In such cases, the array length should be zero.  */
-  if (high_bound < low_bound)
-    TYPE_LENGTH (result_type) = 0;
-  else
-    TYPE_LENGTH (result_type) =
-      TYPE_LENGTH (element_type) * (high_bound - low_bound + 1);
+  TYPE_LENGTH (result_type) = 0;
   TYPE_NFIELDS (result_type) = 1;
   TYPE_FIELDS (result_type) =
     (struct field *) TYPE_ZALLOC (result_type, sizeof (struct field));
   TYPE_INDEX_TYPE (result_type) = range_type;
   TYPE_VPTR_FIELDNO (result_type) = -1;
+
+  if (static_bounds_p (TYPE_RANGE_DATA (range_type)))
+    {
+      if (get_discrete_bounds (range_type, &low_bound, &high_bound) < 0)
+	low_bound = high_bound = 0;
+      CHECK_TYPEDEF (element_type);
+      /* Be careful when setting the array length.  Ada arrays can be
+	 empty arrays with the high_bound being smaller than the low_bound.
+	 In such cases, the array length should be zero.  */
+      if (high_bound < low_bound)
+	TYPE_LENGTH (result_type) = 0;
+      else
+	TYPE_LENGTH (result_type) =
+	  TYPE_LENGTH (element_type) * (high_bound - low_bound + 1);
+    }
+  else
+    TYPE_LENGTH (result_type) = 0;
 
   /* TYPE_FLAG_TARGET_STUB will take care of zero length arrays.  */
   if (TYPE_LENGTH (result_type) == 0)
@@ -1518,6 +1529,99 @@ stub_noname_complaint (void)
   complaint (&symfile_complaints, _("stub type has NULL name"));
 }
 
+/* Predicate tests whether BOUNDS are static. Returns 1 if all bounds values
+   are static, otherwise returns 0.  */
+
+static int
+static_bounds_p (const struct range_bounds *bounds)
+{
+  return bounds->low.kind == DWARF_CONST
+    && bounds->high.kind == DWARF_CONST;
+}
+
+/* Converts a dynamic value into a static one. Returns 1 if PROP could be
+   converted and the static value is passed back into VALUE, otherwise
+   returns 0.  */
+
+static int
+resolve_dynamic_prop (const struct dwarf2_prop *prop, CORE_ADDR address,
+		      CORE_ADDR *value)
+{
+  if (value == NULL)
+    return 0;
+
+  switch (prop->kind)
+    {
+    case DWARF_LOCEXPR:
+      {
+	struct dwarf2_locexpr_baton baton = *prop->data.locexpr;
+
+	return dwarf2_locexpr_baton_eval (&baton, address, value);
+      }
+      /* TODO(sag): I will hold back the changes to make location lists work
+       until I have a testcase.  */
+    case DWARF_LOCLIST:
+    case DWARF_CONST:
+      break;
+    }
+
+  return 0;
+}
+
+/* Resolves all dynamic values of a type e.g. array bounds to static values.
+   If TYPE has no dynamic values returns TYPE otherwise a new type with static
+   values is returned.  */
+
+struct type *
+resolve_dynamic_values (struct type *type, CORE_ADDR address)
+{
+  struct type *resolved_type;
+  const struct type *range_type;
+  const struct dwarf2_prop *prop;
+  struct objfile *objfile;
+  htab_t copied_types;
+  CORE_ADDR value;
+
+  if (type == NULL
+      || TYPE_CODE (type) != TYPE_CODE_ARRAY
+      || TYPE_NFIELDS (type) == 0)
+    return type;
+  /* if (!TYPE_ALLOCATED (type))
+     return type; */
+
+  /* TODO(sag): Add this check to bail out early. Need to agree if allocated
+     flag should be set to true for all non ALLOCATED types. */
+
+  range_type = TYPE_INDEX_TYPE (type);
+
+  if (TYPE_CODE (range_type) != TYPE_CODE_RANGE
+      || static_bounds_p (TYPE_RANGE_DATA (range_type)))
+    return type;
+
+  objfile = TYPE_OBJFILE (type);
+  copied_types = create_copied_types_hash (NULL);
+  resolved_type = copy_type_recursive (objfile, type, copied_types);
+  range_type = TYPE_INDEX_TYPE (resolved_type);
+
+  prop = &TYPE_RANGE_DATA (range_type)->low;
+  if (resolve_dynamic_prop (prop, address, &value))
+    {
+      TYPE_LOW_BOUND (range_type) = value;
+      TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+    }
+
+  prop = &TYPE_RANGE_DATA (range_type)->high;
+  if (resolve_dynamic_prop (prop, address, &value))
+    {
+      TYPE_HIGH_BOUND (range_type) = value;
+      TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+    }
+
+  check_typedef (resolved_type);
+
+  return resolved_type;
+}
+
 /* Find the real type of TYPE.  This function returns the real type,
    after removing all layers of typedefs, and completing opaque or stub
    types.  Completion changes the TYPE argument, but stripping of
@@ -1698,39 +1802,45 @@ check_typedef (struct type *type)
 	       && (TYPE_CODE (range_type = TYPE_INDEX_TYPE (type))
 		   == TYPE_CODE_RANGE))
 	{
-	  /* Now recompute the length of the array type, based on its
-	     number of elements and the target type's length.
-	     Watch out for Ada null Ada arrays where the high bound
-	     is smaller than the low bound.  */
-	  const LONGEST low_bound = TYPE_LOW_BOUND (range_type);
-	  const LONGEST high_bound = TYPE_HIGH_BOUND (range_type);
-	  ULONGEST len;
 
-	  if (high_bound < low_bound)
-	    len = 0;
-	  else
+	  /* TODO(sag): This part should be refactored into a function capable to
+	   calculate the correct size of a type honoring upper/lower/stride.  */
+	  if (static_bounds_p (TYPE_RANGE_DATA (range_type))) 
 	    {
-	      /* For now, we conservatively take the array length to be 0
-		 if its length exceeds UINT_MAX.  The code below assumes
-		 that for x < 0, (ULONGEST) x == -x + ULONGEST_MAX + 1,
-		 which is technically not guaranteed by C, but is usually true
-		 (because it would be true if x were unsigned with its
-		 high-order bit on).  It uses the fact that
-		 high_bound-low_bound is always representable in
-		 ULONGEST and that if high_bound-low_bound+1 overflows,
-		 it overflows to 0.  We must change these tests if we 
-		 decide to increase the representation of TYPE_LENGTH
-		 from unsigned int to ULONGEST.  */
-	      ULONGEST ulow = low_bound, uhigh = high_bound;
-	      ULONGEST tlen = TYPE_LENGTH (target_type);
+	      /* Now recompute the length of the array type, based on its
+		 number of elements and the target type's length.
+		 Watch out for Ada null Ada arrays where the high bound
+		 is smaller than the low bound.  */
+	      const LONGEST low_bound = TYPE_LOW_BOUND (range_type);
+	      const LONGEST high_bound = TYPE_HIGH_BOUND (range_type);
+	      ULONGEST len;
 
-	      len = tlen * (uhigh - ulow + 1);
-	      if (tlen == 0 || (len / tlen - 1 + ulow) != uhigh 
-		  || len > UINT_MAX)
+	      if (high_bound < low_bound)
 		len = 0;
+	      else
+		{
+		  /* For now, we conservatively take the array length to be 0
+		     if its length exceeds UINT_MAX.  The code below assumes
+		     that for x < 0, (ULONGEST) x == -x + ULONGEST_MAX + 1,
+		     which is technically not guaranteed by C, but is usually true
+		     (because it would be true if x were unsigned with its
+		     high-order bit on).  It uses the fact that
+		     high_bound-low_bound is always representable in
+		     ULONGEST and that if high_bound-low_bound+1 overflows,
+		     it overflows to 0.  We must change these tests if we 
+		     decide to increase the representation of TYPE_LENGTH
+		     from unsigned int to ULONGEST.  */
+		  ULONGEST ulow = low_bound, uhigh = high_bound;
+		  ULONGEST tlen = TYPE_LENGTH (target_type);
+
+		  len = tlen * (uhigh - ulow + 1);
+		  if (tlen == 0 || (len / tlen - 1 + ulow) != uhigh 
+		      || len > UINT_MAX)
+		    len = 0;
+		}
+	      TYPE_LENGTH (type) = len;
+	      TYPE_TARGET_STUB (type) = 0;
 	    }
-	  TYPE_LENGTH (type) = len;
-	  TYPE_TARGET_STUB (type) = 0;
 	}
       else if (TYPE_CODE (type) == TYPE_CODE_RANGE)
 	{

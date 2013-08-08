@@ -1715,6 +1715,9 @@ extern void recursive_dump_type (struct type *, int);
 
 extern int field_is_static (struct field *);
 
+struct type *resolve_dynamic_values
+ (struct type *type, CORE_ADDR address);
+
 /* printcmd.c */
 
 extern void print_scalar_formatted (const void *, struct type *,

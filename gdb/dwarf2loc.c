@@ -2424,6 +2424,52 @@ dwarf2_evaluate_loc_desc (struct type *type, struct frame_info *frame,
   return dwarf2_evaluate_loc_desc_full (type, frame, data, size, per_cu, 0);
 }
 
+/* See dwarf2loc.h.  */
+
+int
+dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
+			   CORE_ADDR addr, CORE_ADDR *valp)
+{
+  struct dwarf_expr_context *ctx;
+  struct dwarf_expr_baton baton;
+  struct objfile *objfile;
+  struct cleanup *cleanup;
+
+  if (dlbaton == NULL || valp == NULL)
+    return 0;
+
+  ctx = new_dwarf_expr_context ();
+  cleanup = make_cleanup_free_dwarf_expr_context (ctx);
+
+  baton.frame = get_selected_frame (NULL);
+  baton.per_cu = dlbaton->per_cu;
+  baton.obj_address = addr;
+
+  objfile = dwarf2_per_cu_objfile (dlbaton->per_cu);
+
+  ctx->gdbarch = get_objfile_arch (objfile);
+  ctx->addr_size = dwarf2_per_cu_addr_size (dlbaton->per_cu);
+  ctx->ref_addr_size = dwarf2_per_cu_ref_addr_size (dlbaton->per_cu);
+  ctx->offset = dwarf2_per_cu_text_offset (dlbaton->per_cu);
+  ctx->funcs = &dwarf_expr_ctx_funcs;
+  ctx->baton = &baton;
+
+  dwarf_expr_eval (ctx, dlbaton->data, dlbaton->size);
+
+  switch (ctx->location)
+    {
+    case DWARF_VALUE_REGISTER:
+      /* TODO(sag): What should we do here?  */
+      break;
+    case DWARF_VALUE_MEMORY:
+      *valp = dwarf_expr_fetch_address (ctx, 0);
+      break;
+    }
+
+  do_cleanups (cleanup);
+
+  return 1;
+}
 
 /* Helper functions and baton for dwarf2_loc_desc_needs_frame.  */
 

@@ -90,6 +90,12 @@ struct value *dwarf2_evaluate_loc_desc (struct type *type,
 					size_t size,
 					struct dwarf2_per_cu_data *per_cu);
 
+/* Evaluates a dwarf location expression and stores the result in VAL.
+   Returns 1 on success, 0 otherwise.   */
+
+int dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
+			       CORE_ADDR addr, CORE_ADDR *valp);
+
 CORE_ADDR dwarf2_read_addr_index (struct dwarf2_per_cu_data *per_cu,
 				  unsigned int addr_index);
 
