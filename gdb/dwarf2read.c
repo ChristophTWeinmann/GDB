@@ -20466,9 +20466,10 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
   attr = dwarf2_attr (die, DW_AT_allocated, cu);
   if (attr != NULL)
     {
-      struct dwarf2_prop prop;
+      struct dwarf2_prop *prop;
 
-      if (attr_to_dwarf2_prop (die, attr, cu, &prop))
+      prop = obstack_alloc (&objfile->objfile_obstack, sizeof (*prop));
+      if (attr_to_dwarf2_prop (die, attr, cu, prop))
         TYPE_ALLOCATED_PROP (type) = prop;
     }
 
@@ -20476,9 +20477,10 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
   attr = dwarf2_attr (die, DW_AT_associated, cu);
   if (attr != NULL)
     {
-      struct dwarf2_prop prop;
+      struct dwarf2_prop *prop;
 
-      if (attr_to_dwarf2_prop (die, attr, cu, &prop))
+      prop = obstack_alloc (&objfile->objfile_obstack, sizeof (*prop));
+      if (attr_to_dwarf2_prop (die, attr, cu, prop))
         TYPE_ASSOCIATED_PROP (type) = prop;
     }
 

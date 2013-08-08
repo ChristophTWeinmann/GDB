@@ -692,13 +692,13 @@ struct main_type
      The presence of this attribute indicates that the object of the type
      can be allocated/deallocated.  The value can be a dwarf expression,
      reference, or a constant.  */
-  struct dwarf2_prop allocated;
+  struct dwarf2_prop *allocated;
 
   /* Structure for DW_AT_associated.
      The presence of this attribute indicated that the object of the type
      can be associated.  The value can be a dwarf expression,
      reference, or a constant.  */
-  struct dwarf2_prop associated;
+  struct dwarf2_prop *associated;
 };
 
 /* A ``struct type'' describes a particular instance of a type, with
