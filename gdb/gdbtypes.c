@@ -1575,22 +1575,28 @@ resolve_dynamic_prop (const struct dwarf2_prop *prop, CORE_ADDR address,
 struct type *
 resolve_dynamic_values (struct type *type, CORE_ADDR address)
 {
-  struct type *resolved_type;
+  struct type *resolved_type = 0;
   const struct type *range_type;
   const struct dwarf2_prop *prop;
   struct objfile *objfile;
   htab_t copied_types;
   CORE_ADDR value;
 
-  if (type == NULL
-      || TYPE_CODE (type) != TYPE_CODE_ARRAY
+  if (type == NULL)
+    return NULL;
+
+  prop = TYPE_ALLOCATED_PROP (type);
+  if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
+    {
+      objfile = TYPE_OBJFILE (type);
+      copied_types = create_copied_types_hash (NULL);
+      resolved_type = copy_type_recursive (objfile, type, copied_types);
+      TYPE_ALLOCATED (resolved_type) = value;
+    }
+
+  if (TYPE_CODE (type) != TYPE_CODE_ARRAY
       || TYPE_NFIELDS (type) == 0)
     return type;
-  /* if (!TYPE_ALLOCATED (type))
-     return type; */
-
-  /* TODO(sag): Add this check to bail out early. Need to agree if allocated
-     flag should be set to true for all non ALLOCATED types. */
 
   range_type = TYPE_INDEX_TYPE (type);
 
@@ -1598,23 +1604,37 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
       || static_bounds_p (TYPE_RANGE_DATA (range_type)))
     return type;
 
-  objfile = TYPE_OBJFILE (type);
-  copied_types = create_copied_types_hash (NULL);
-  resolved_type = copy_type_recursive (objfile, type, copied_types);
-  range_type = TYPE_INDEX_TYPE (resolved_type);
-
-  prop = &TYPE_RANGE_DATA (range_type)->low;
-  if (resolve_dynamic_prop (prop, address, &value))
+  if (!resolved_type)
     {
-      TYPE_LOW_BOUND (range_type) = value;
-      TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+      objfile = TYPE_OBJFILE (type);
+      copied_types = create_copied_types_hash (NULL);
+      resolved_type = copy_type_recursive (objfile, type, copied_types);
     }
 
-  prop = &TYPE_RANGE_DATA (range_type)->high;
-  if (resolve_dynamic_prop (prop, address, &value))
+  range_type = TYPE_INDEX_TYPE (resolved_type);
+
+  if (TYPE_ALLOCATED_PROP (resolved_type) && !TYPE_ALLOCATED (resolved_type))
     {
-      TYPE_HIGH_BOUND (range_type) = value;
+      TYPE_LOW_BOUND (range_type) = 0;
+      TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+      TYPE_HIGH_BOUND (range_type) = 0;
       TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+    }
+  else
+    {
+      prop = &TYPE_RANGE_DATA (range_type)->low;
+      if (resolve_dynamic_prop (prop, address, &value))
+	{
+	  TYPE_LOW_BOUND (range_type) = value;
+	  TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+	}
+
+      prop = &TYPE_RANGE_DATA (range_type)->high;
+      if (resolve_dynamic_prop (prop, address, &value))
+	{
+	  TYPE_HIGH_BOUND (range_type) = value;
+	  TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+	}
     }
 
   check_typedef (resolved_type);
