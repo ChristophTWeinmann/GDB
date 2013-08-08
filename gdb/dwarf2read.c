@@ -21782,14 +21782,18 @@ attr_to_dwarf2_prop (struct die_info *die, const struct attribute *attr, struct 
     }
   else if (attr_form_is_ref (attr))
     {
-      struct dwarf2_loclist_baton *baton;
+      struct dwarf2_cu *target_cu = cu;
+      struct die_info *target_die;
+      struct attribute *target_attr;
+      const gdb_byte append_ops[] = { DW_OP_deref };
 
-      baton = obstack_alloc (&dwarf2_per_objfile->objfile->objfile_obstack,
-                             sizeof (struct dwarf2_loclist_baton));
-      fill_in_loclist_baton (cu, baton, attr);
-      prop->data.loclist = baton;
-      prop->kind = DWARF_LOCLIST;
-      gdb_assert (prop->data.loclist != NULL);
+      target_die = follow_die_ref (die, attr, &target_cu);
+      target_attr = dwarf2_attr (target_die, DW_AT_location, target_cu);
+
+      prop->data.locexpr = attr_to_locexprbaton_1(target_attr, cu,
+                      append_ops, sizeof (append_ops) / sizeof (append_ops[0]));
+      prop->kind = DWARF_LOCEXPR;
+      gdb_assert (prop->data.locexpr != NULL);
     }
   else if (attr_form_is_constant (attr))
     {
