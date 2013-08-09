@@ -1588,8 +1588,11 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
   prop = TYPE_ALLOCATED_PROP (type);
   if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
     {
+      struct obstack obstack;
+
       objfile = TYPE_OBJFILE (type);
-      copied_types = create_copied_types_hash (NULL);
+      obstack_init (&obstack);
+      copied_types = create_copied_types_hash (&obstack);
       resolved_type = copy_type_recursive (objfile, type, copied_types);
       TYPE_ALLOCATED (resolved_type) = value;
     }
@@ -1606,8 +1609,11 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
 
   if (!resolved_type)
     {
+      struct obstack obstack;
+
       objfile = TYPE_OBJFILE (type);
-      copied_types = create_copied_types_hash (NULL);
+      obstack_init (&obstack);
+      copied_types = create_copied_types_hash (&obstack);
       resolved_type = copy_type_recursive (objfile, type, copied_types);
     }
 
@@ -3606,15 +3612,12 @@ type_pair_eq (const void *item_lhs, const void *item_rhs)
    OBJFILE is about to be deleted.  */
 
 htab_t
-create_copied_types_hash (struct objfile *objfile)
+create_copied_types_hash (struct obstack *obstack)
 {
-  if (objfile == NULL)
-    return htab_create (1, type_pair_hash, type_pair_eq, xfree);
-  else
-    return htab_create_alloc_ex (1, type_pair_hash, type_pair_eq,
-				 NULL, &objfile->objfile_obstack,
-				 hashtab_obstack_allocate,
-				 dummy_obstack_deallocate);
+  return htab_create_alloc_ex (1, type_pair_hash, type_pair_eq,
+			       NULL, obstack,
+			       hashtab_obstack_allocate,
+			       dummy_obstack_deallocate);
 }
 
 /* Recursively copy (deep copy) TYPE, if it is associated with

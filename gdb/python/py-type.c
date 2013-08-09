@@ -1196,7 +1196,7 @@ save_objfile_types (struct objfile *objfile, void *datum)
      operating on.  */
   cleanup = ensure_python_env (get_objfile_arch (objfile), current_language);
 
-  copied_types = create_copied_types_hash (objfile);
+  copied_types = create_copied_types_hash (&objfile->objfile_obstack);
 
   while (obj)
     {

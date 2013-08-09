@@ -1732,7 +1732,7 @@ extern int is_scalar_type_recursive (struct type *);
 
 extern void maintenance_print_type (char *, int);
 
-extern htab_t create_copied_types_hash (struct objfile *objfile);
+extern htab_t create_copied_types_hash (struct obstack *obstack);
 
 extern struct type *copy_type_recursive (struct objfile *objfile,
 					 struct type *type,

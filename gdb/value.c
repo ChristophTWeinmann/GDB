@@ -2220,7 +2220,7 @@ preserve_values (struct objfile *objfile)
 
   /* Create the hash table.  We allocate on the objfile's obstack, since
      it is soon to be deleted.  */
-  copied_types = create_copied_types_hash (objfile);
+  copied_types = create_copied_types_hash (&objfile->objfile_obstack);
 
   for (cur = value_history_chain; cur; cur = cur->next)
     for (i = 0; i < VALUE_HISTORY_CHUNK; i++)
