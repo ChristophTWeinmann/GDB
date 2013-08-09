@@ -1539,6 +1539,26 @@ static_bounds_p (const struct range_bounds *bounds)
     && bounds->high.kind == DWARF_CONST;
 }
 
+/* Predicate tests whether a type has dynamic values. Returns 1 if TYPE has any
+   dynamic values.  */
+
+static int
+dynamic_type_p (const struct type *type)
+{
+  if (TYPE_ALLOCATED_PROP (type) != NULL)
+    return 1;
+
+  if (TYPE_CODE (type) == TYPE_CODE_ARRAY && TYPE_NFIELDS (type) >= 1)
+    {
+      const struct type *range_type = TYPE_INDEX_TYPE (type);
+
+      if (TYPE_CODE (range_type) == TYPE_CODE_RANGE)
+	return !static_bounds_p (TYPE_RANGE_DATA (range_type));
+    }
+
+  return 0;
+}
+
 /* Converts a dynamic value into a static one. Returns 1 if PROP could be
    converted and the static value is passed back into VALUE, otherwise
    returns 0.  */
@@ -1578,46 +1598,34 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
   struct type *resolved_type = 0;
   const struct type *range_type;
   const struct dwarf2_prop *prop;
-  struct objfile *objfile;
+  struct obstack obstack;
+  struct cleanup *cleanup;
   htab_t copied_types;
   CORE_ADDR value;
 
-  if (type == NULL)
-    return NULL;
+  if (type == NULL || !dynamic_type_p (type))
+    return type;
+
+  obstack_init (&obstack);
+  cleanup = make_cleanup_obstack_free (&obstack);
+  copied_types = create_copied_types_hash (&obstack);
+  make_cleanup_htab_delete (copied_types);
+  resolved_type = copy_type_recursive (TYPE_OBJFILE (type), type, copied_types);
+  do_cleanups (cleanup);
 
   prop = TYPE_ALLOCATED_PROP (type);
   if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
-    {
-      struct obstack obstack;
-
-      objfile = TYPE_OBJFILE (type);
-      obstack_init (&obstack);
-      copied_types = create_copied_types_hash (&obstack);
-      resolved_type = copy_type_recursive (objfile, type, copied_types);
       TYPE_ALLOCATED (resolved_type) = value;
-    }
 
   if (TYPE_CODE (type) != TYPE_CODE_ARRAY
       || TYPE_NFIELDS (type) == 0)
     return type;
 
-  range_type = TYPE_INDEX_TYPE (type);
+  range_type = TYPE_INDEX_TYPE (resolved_type);
 
   if (TYPE_CODE (range_type) != TYPE_CODE_RANGE
       || static_bounds_p (TYPE_RANGE_DATA (range_type)))
     return type;
-
-  if (!resolved_type)
-    {
-      struct obstack obstack;
-
-      objfile = TYPE_OBJFILE (type);
-      obstack_init (&obstack);
-      copied_types = create_copied_types_hash (&obstack);
-      resolved_type = copy_type_recursive (objfile, type, copied_types);
-    }
-
-  range_type = TYPE_INDEX_TYPE (resolved_type);
 
   if (TYPE_ALLOCATED_PROP (resolved_type) && !TYPE_ALLOCATED (resolved_type))
     {
