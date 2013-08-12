@@ -96,6 +96,10 @@ struct value *dwarf2_evaluate_loc_desc (struct type *type,
 int dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 			       CORE_ADDR addr, CORE_ADDR *valp);
 
+/* Checks if a dwarf location definition is valid or not.  */
+
+int dwarf2_address_data_valid (const struct type *type);
+
 CORE_ADDR dwarf2_read_addr_index (struct dwarf2_per_cu_data *per_cu,
 				  unsigned int addr_index);
 

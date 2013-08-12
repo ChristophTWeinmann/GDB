@@ -2470,6 +2470,18 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 
   return 1;
 }
+
+/* See dwarf2loc.h.  */
+
+int dwarf2_address_data_valid (const struct type *type)
+{
+  // TODO (kbo): add associated
+
+  if (TYPE_ALLOCATED_PROP (type) && !TYPE_ALLOCATED (type))
+    return 0;
+
+  return 1;
+}
 
 /* Helper functions and baton for dwarf2_loc_desc_needs_frame.  */
 

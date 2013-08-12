@@ -3532,19 +3532,22 @@ value_fetch_lazy (struct value *val)
       struct type *type;
       CORE_ADDR addr = value_address (val);
 
-      if (TYPE_DATA_LOCATION_IS_ADDRESS (value_enclosing_type (val)))
-        addr = TYPE_DATA_LOCATION_ADDR (value_enclosing_type (val));
-      else if (TYPE_DATA_LOCATION_BATON (value_enclosing_type (val)) != NULL)
-        {
-          CORE_ADDR value_address = 0;
+      if (dwarf2_address_data_valid (value_enclosing_type (val)))
+      {
+        if (TYPE_DATA_LOCATION_IS_ADDRESS (value_enclosing_type (val)))
+          addr = TYPE_DATA_LOCATION_ADDR (value_enclosing_type (val));
+        else if (TYPE_DATA_LOCATION_BATON (value_enclosing_type (val)) != NULL)
+          {
+            CORE_ADDR value_address = 0;
 
-          struct dwarf2_locexpr_baton *dlbaton =
-            TYPE_DATA_LOCATION_BATON (value_enclosing_type (val));
-          (void)dwarf2_locexpr_baton_eval (dlbaton, addr, &value_address);
+            struct dwarf2_locexpr_baton *dlbaton =
+              TYPE_DATA_LOCATION_BATON (value_enclosing_type (val));
+            (void)dwarf2_locexpr_baton_eval (dlbaton, addr, &value_address);
 
-          if (value_address != 0)
-            addr = value_address + value_offset (val);
-        }
+            if (value_address != 0)
+              addr = value_address + value_offset (val);
+          }
+      }
 
       type = check_typedef (value_enclosing_type (val));
 
