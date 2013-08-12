@@ -1640,17 +1640,17 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
 
       prop = &TYPE_RANGE_DATA (range_type)->low;
       if (resolve_dynamic_prop (prop, address, &value))
-	{
-	  TYPE_LOW_BOUND (range_type) = value;
-	  TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
-	}
+        {
+          TYPE_LOW_BOUND (range_type) = value;
+          TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+        }
 
       prop = &TYPE_RANGE_DATA (range_type)->high;
       if (resolve_dynamic_prop (prop, address, &value))
-	{
-	  TYPE_HIGH_BOUND (range_type) = value;
-	  TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
-	}
+        {
+          TYPE_HIGH_BOUND (range_type) = value;
+          TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+        }
 
       baton = TYPE_DATA_LOCATION_BATON (type);
       if (dwarf2_locexpr_baton_eval (baton, address, &value))
