@@ -1636,6 +1636,8 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
     }
   else
     {
+      const struct dwarf2_locexpr_baton *baton;
+
       prop = &TYPE_RANGE_DATA (range_type)->low;
       if (resolve_dynamic_prop (prop, address, &value))
 	{
@@ -1649,6 +1651,13 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
 	  TYPE_HIGH_BOUND (range_type) = value;
 	  TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
 	}
+
+      baton = TYPE_DATA_LOCATION_BATON (type);
+      if (dwarf2_locexpr_baton_eval (baton, address, &value))
+        {
+          TYPE_DATA_LOCATION_ADDR (resolved_type) = value;
+          TYPE_DATA_LOCATION_IS_ADDRESS (resolved_type) = 1;
+        }
     }
 
   check_typedef (resolved_type);
