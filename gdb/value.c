@@ -43,6 +43,7 @@
 #include "tracepoint.h"
 #include "cp-abi.h"
 #include "user-regs.h"
+#include "dwarf2loc.h"
 
 /* Prototypes for exported functions.  */
 
@@ -1460,6 +1461,32 @@ set_value_component_location (struct value *component,
 
       if (funcs->copy_closure)
         component->location.computed.closure = funcs->copy_closure (whole);
+    }
+
+  /* For dynamic types compute the address of the component value location in
+     sub range types based on the location of the sub range type, if not being
+     an internal GDB variable or parts of it.  */
+  if (VALUE_LVAL (component) != lval_internalvar
+          && VALUE_LVAL (component) != lval_internalvar_component)
+    {
+      CORE_ADDR addr;
+      struct type *type = value_type (whole);
+      struct dwarf2_locexpr_baton *dlbaton = TYPE_DATA_LOCATION_BATON (type);
+
+      addr = value_raw_address (component);
+
+      if (TYPE_DATA_LOCATION_IS_ADDRESS (type))
+        {
+          addr = TYPE_DATA_LOCATION_ADDR (type);
+          set_value_address (component, addr);
+        }
+      else if (TYPE_DATA_LOCATION_BATON (type) != NULL)
+        {
+          CORE_ADDR new_addr;
+
+          (void)dwarf2_locexpr_baton_eval (dlbaton, addr, &new_addr);
+          set_value_address (component, new_addr);
+        }
     }
 }
 
@@ -3502,13 +3529,29 @@ value_fetch_lazy (struct value *val)
     }
   else if (VALUE_LVAL (val) == lval_memory)
     {
+      struct type *type;
       CORE_ADDR addr = value_address (val);
-      struct type *type = check_typedef (value_enclosing_type (val));
+
+      if (TYPE_DATA_LOCATION_IS_ADDRESS (value_enclosing_type (val)))
+        addr = TYPE_DATA_LOCATION_ADDR (value_enclosing_type (val));
+      else if (TYPE_DATA_LOCATION_BATON (value_enclosing_type (val)) != NULL)
+        {
+          CORE_ADDR value_address = 0;
+
+          struct dwarf2_locexpr_baton *dlbaton =
+            TYPE_DATA_LOCATION_BATON (value_enclosing_type (val));
+          (void)dwarf2_locexpr_baton_eval (dlbaton, addr, &value_address);
+
+          if (value_address != 0)
+            addr = value_address + value_offset (val);
+        }
+
+      type = check_typedef (value_enclosing_type (val));
 
       if (TYPE_LENGTH (type))
-	read_value_memory (val, 0, value_stack (val),
-			   addr, value_contents_all_raw (val),
-			   TYPE_LENGTH (type));
+        read_value_memory (val, 0, value_stack (val),
+                           addr, value_contents_all_raw (val),
+                           TYPE_LENGTH (type));
     }
   else if (VALUE_LVAL (val) == lval_register)
     {
