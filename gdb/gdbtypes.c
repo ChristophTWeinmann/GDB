@@ -1706,31 +1706,31 @@ check_typedef (struct type *type)
   while (TYPE_CODE (type) == TYPE_CODE_TYPEDEF)
     {
       if (!TYPE_TARGET_TYPE (type))
-	{
-	  const char *name;
-	  struct symbol *sym;
+        {
+          const char *name;
+          struct symbol *sym;
 
-	  /* It is dangerous to call lookup_symbol if we are currently
-	     reading a symtab.  Infinite recursion is one danger.  */
-	  if (currently_reading_symtab)
-	    return make_qualified_type (type, instance_flags, NULL);
+          /* It is dangerous to call lookup_symbol if we are currently
+             reading a symtab.  Infinite recursion is one danger.  */
+          if (currently_reading_symtab)
+            return make_qualified_type (type, instance_flags, NULL);
 
-	  name = type_name_no_tag (type);
-	  /* FIXME: shouldn't we separately check the TYPE_NAME and
-	     the TYPE_TAG_NAME, and look in STRUCT_DOMAIN and/or
-	     VAR_DOMAIN as appropriate?  (this code was written before
-	     TYPE_NAME and TYPE_TAG_NAME were separate).  */
-	  if (name == NULL)
-	    {
-	      stub_noname_complaint ();
-	      return make_qualified_type (type, instance_flags, NULL);
-	    }
-	  sym = lookup_symbol (name, 0, STRUCT_DOMAIN, 0);
-	  if (sym)
-	    TYPE_TARGET_TYPE (type) = SYMBOL_TYPE (sym);
-	  else					/* TYPE_CODE_UNDEF */
-	    TYPE_TARGET_TYPE (type) = alloc_type_arch (get_type_arch (type));
-	}
+          name = type_name_no_tag (type);
+          /* FIXME: shouldn't we separately check the TYPE_NAME and
+             the TYPE_TAG_NAME, and look in STRUCT_DOMAIN and/or
+             VAR_DOMAIN as appropriate?  (this code was written before
+             TYPE_NAME and TYPE_TAG_NAME were separate).  */
+          if (name == NULL)
+            {
+              stub_noname_complaint ();
+              return make_qualified_type (type, instance_flags, NULL);
+            }
+          sym = lookup_symbol (name, 0, STRUCT_DOMAIN, 0);
+          if (sym)
+            TYPE_TARGET_TYPE (type) = SYMBOL_TYPE (sym);
+          else					/* TYPE_CODE_UNDEF */
+            TYPE_TARGET_TYPE (type) = alloc_type_arch (get_type_arch (type));
+        }
       type = TYPE_TARGET_TYPE (type);
 
       /* Preserve the instance flags as we traverse down the typedef chain.
@@ -1745,18 +1745,18 @@ check_typedef (struct type *type)
 	 outer cast in a chain of casting win), instead of assuming
 	 "it can't happen".  */
       {
-	const int ALL_SPACES = (TYPE_INSTANCE_FLAG_CODE_SPACE
-				| TYPE_INSTANCE_FLAG_DATA_SPACE);
-	const int ALL_CLASSES = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL;
-	int new_instance_flags = TYPE_INSTANCE_FLAGS (type);
+        const int ALL_SPACES = (TYPE_INSTANCE_FLAG_CODE_SPACE
+              | TYPE_INSTANCE_FLAG_DATA_SPACE);
+        const int ALL_CLASSES = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL;
+        int new_instance_flags = TYPE_INSTANCE_FLAGS (type);
 
-	/* Treat code vs data spaces and address classes separately.  */
-	if ((instance_flags & ALL_SPACES) != 0)
-	  new_instance_flags &= ~ALL_SPACES;
-	if ((instance_flags & ALL_CLASSES) != 0)
-	  new_instance_flags &= ~ALL_CLASSES;
+        /* Treat code vs data spaces and address classes separately.  */
+        if ((instance_flags & ALL_SPACES) != 0)
+          new_instance_flags &= ~ALL_SPACES;
+        if ((instance_flags & ALL_CLASSES) != 0)
+          new_instance_flags &= ~ALL_CLASSES;
 
-	instance_flags |= new_instance_flags;
+        instance_flags |= new_instance_flags;
       }
     }
 
@@ -1774,31 +1774,31 @@ check_typedef (struct type *type)
       struct type *newtype;
 
       if (name == NULL)
-	{
-	  stub_noname_complaint ();
-	  return make_qualified_type (type, instance_flags, NULL);
-	}
+        {
+          stub_noname_complaint ();
+          return make_qualified_type (type, instance_flags, NULL);
+        }
       newtype = lookup_transparent_type (name);
 
       if (newtype)
-	{
-	  /* If the resolved type and the stub are in the same
-	     objfile, then replace the stub type with the real deal.
-	     But if they're in separate objfiles, leave the stub
-	     alone; we'll just look up the transparent type every time
-	     we call check_typedef.  We can't create pointers between
-	     types allocated to different objfiles, since they may
-	     have different lifetimes.  Trying to copy NEWTYPE over to
-	     TYPE's objfile is pointless, too, since you'll have to
-	     move over any other types NEWTYPE refers to, which could
-	     be an unbounded amount of stuff.  */
-	  if (TYPE_OBJFILE (newtype) == TYPE_OBJFILE (type))
-	    type = make_qualified_type (newtype,
-					TYPE_INSTANCE_FLAGS (type),
-					type);
-	  else
-	    type = newtype;
-	}
+        {
+          /* If the resolved type and the stub are in the same
+             objfile, then replace the stub type with the real deal.
+             But if they're in separate objfiles, leave the stub
+             alone; we'll just look up the transparent type every time
+             we call check_typedef.  We can't create pointers between
+             types allocated to different objfiles, since they may
+             have different lifetimes.  Trying to copy NEWTYPE over to
+             TYPE's objfile is pointless, too, since you'll have to
+             move over any other types NEWTYPE refers to, which could
+             be an unbounded amount of stuff.  */
+          if (TYPE_OBJFILE (newtype) == TYPE_OBJFILE (type))
+            type = make_qualified_type (newtype,
+                TYPE_INSTANCE_FLAGS (type),
+                type);
+          else
+            type = newtype;
+        }
     }
   /* Otherwise, rely on the stub flag being set for opaque/stubbed
      types.  */
@@ -1812,22 +1812,22 @@ check_typedef (struct type *type)
       struct symbol *sym;
 
       if (name == NULL)
-	{
-	  stub_noname_complaint ();
-	  return make_qualified_type (type, instance_flags, NULL);
-	}
+        {
+          stub_noname_complaint ();
+          return make_qualified_type (type, instance_flags, NULL);
+        }
       sym = lookup_symbol (name, 0, STRUCT_DOMAIN, 0);
       if (sym)
         {
           /* Same as above for opaque types, we can replace the stub
              with the complete type only if they are in the same
              objfile.  */
-	  if (TYPE_OBJFILE (SYMBOL_TYPE(sym)) == TYPE_OBJFILE (type))
-            type = make_qualified_type (SYMBOL_TYPE (sym),
-					TYPE_INSTANCE_FLAGS (type),
-					type);
-	  else
-	    type = SYMBOL_TYPE (sym);
+          if (TYPE_OBJFILE (SYMBOL_TYPE(sym)) == TYPE_OBJFILE (type))
+                   type = make_qualified_type (SYMBOL_TYPE (sym),
+                TYPE_INSTANCE_FLAGS (type),
+                type);
+          else
+            type = SYMBOL_TYPE (sym);
         }
     }
 
@@ -1837,59 +1837,58 @@ check_typedef (struct type *type)
       struct type *target_type = check_typedef (TYPE_TARGET_TYPE (type));
 
       if (TYPE_STUB (target_type) || TYPE_TARGET_STUB (target_type))
-	{
-	  /* Nothing we can do.  */
-	}
+        {
+          /* Nothing we can do.  */
+        }
       else if (TYPE_CODE (type) == TYPE_CODE_ARRAY
 	       && TYPE_NFIELDS (type) == 1
 	       && (TYPE_CODE (range_type = TYPE_INDEX_TYPE (type))
-		   == TYPE_CODE_RANGE))
-	{
+              == TYPE_CODE_RANGE))
+        {
+          /* TODO(sag): This part should be refactored into a function capable to
+             calculate the correct size of a type honoring upper/lower/stride.  */
+          if (static_bounds_p (TYPE_RANGE_DATA (range_type)))
+            {
+              /* Now recompute the length of the array type, based on its
+                 number of elements and the target type's length.
+                 Watch out for Ada null Ada arrays where the high bound
+                 is smaller than the low bound.  */
+              const LONGEST low_bound = TYPE_LOW_BOUND (range_type);
+              const LONGEST high_bound = TYPE_HIGH_BOUND (range_type);
+              ULONGEST len;
 
-	  /* TODO(sag): This part should be refactored into a function capable to
-	   calculate the correct size of a type honoring upper/lower/stride.  */
-	  if (static_bounds_p (TYPE_RANGE_DATA (range_type))) 
-	    {
-	      /* Now recompute the length of the array type, based on its
-		 number of elements and the target type's length.
-		 Watch out for Ada null Ada arrays where the high bound
-		 is smaller than the low bound.  */
-	      const LONGEST low_bound = TYPE_LOW_BOUND (range_type);
-	      const LONGEST high_bound = TYPE_HIGH_BOUND (range_type);
-	      ULONGEST len;
+              if (high_bound < low_bound)
+                len = 0;
+              else
+                {
+                  /* For now, we conservatively take the array length to be 0
+                     if its length exceeds UINT_MAX.  The code below assumes
+                     that for x < 0, (ULONGEST) x == -x + ULONGEST_MAX + 1,
+                     which is technically not guaranteed by C, but is usually true
+                     (because it would be true if x were unsigned with its
+                     high-order bit on).  It uses the fact that
+                     high_bound-low_bound is always representable in
+                     ULONGEST and that if high_bound-low_bound+1 overflows,
+                     it overflows to 0.  We must change these tests if we
+                     decide to increase the representation of TYPE_LENGTH
+                     from unsigned int to ULONGEST.  */
+                  ULONGEST ulow = low_bound, uhigh = high_bound;
+                  ULONGEST tlen = TYPE_LENGTH (target_type);
 
-	      if (high_bound < low_bound)
-		len = 0;
-	      else
-		{
-		  /* For now, we conservatively take the array length to be 0
-		     if its length exceeds UINT_MAX.  The code below assumes
-		     that for x < 0, (ULONGEST) x == -x + ULONGEST_MAX + 1,
-		     which is technically not guaranteed by C, but is usually true
-		     (because it would be true if x were unsigned with its
-		     high-order bit on).  It uses the fact that
-		     high_bound-low_bound is always representable in
-		     ULONGEST and that if high_bound-low_bound+1 overflows,
-		     it overflows to 0.  We must change these tests if we 
-		     decide to increase the representation of TYPE_LENGTH
-		     from unsigned int to ULONGEST.  */
-		  ULONGEST ulow = low_bound, uhigh = high_bound;
-		  ULONGEST tlen = TYPE_LENGTH (target_type);
-
-		  len = tlen * (uhigh - ulow + 1);
-		  if (tlen == 0 || (len / tlen - 1 + ulow) != uhigh 
-		      || len > UINT_MAX)
-		    len = 0;
-		}
-	      TYPE_LENGTH (type) = len;
-	      TYPE_TARGET_STUB (type) = 0;
-	    }
-	}
+                  len = tlen * (uhigh - ulow + 1);
+                  if (tlen == 0 || (len / tlen - 1 + ulow) != uhigh
+                      || len > UINT_MAX)
+                    len = 0;
+                }
+              TYPE_LENGTH (type) = len;
+              TYPE_TARGET_STUB (type) = 0;
+            }
+        }
       else if (TYPE_CODE (type) == TYPE_CODE_RANGE)
-	{
-	  TYPE_LENGTH (type) = TYPE_LENGTH (target_type);
-	  TYPE_TARGET_STUB (type) = 0;
-	}
+        {
+          TYPE_LENGTH (type) = TYPE_LENGTH (target_type);
+          TYPE_TARGET_STUB (type) = 0;
+        }
     }
 
   type = make_qualified_type (type, instance_flags, NULL);
