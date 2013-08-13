@@ -1613,6 +1613,11 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
   resolved_type = copy_type_recursive (TYPE_OBJFILE (type), type, copied_types);
   do_cleanups (cleanup);
 
+  /* Recursive resolve target types first.  */
+  if (TYPE_TARGET_TYPE (resolved_type))
+    TYPE_TARGET_TYPE (resolved_type) =
+            resolve_dynamic_values (TYPE_TARGET_TYPE (resolved_type), address);
+
   prop = TYPE_ALLOCATED_PROP (type);
   if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
       TYPE_ALLOCATED (resolved_type) = value;
