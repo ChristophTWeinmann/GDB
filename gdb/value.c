@@ -1621,6 +1621,17 @@ show_values (char *num_exp, int from_tty)
       num_exp[1] = '\0';
     }
 }
+
+/* Resolves type in struct value.  */
+
+void resolve_value_type (struct value *value, CORE_ADDR address)
+{
+  if (value == NULL || address == 0)
+    return;
+
+  value->type = resolve_dynamic_values (value->type, address);
+  value->enclosing_type = value->type;
+}
 
 /* Internal variables.  These are variables within the debugger
    that hold values assigned by debugger commands.
@@ -3199,8 +3210,7 @@ value_from_contents_and_address (struct type *type,
 
   /* If TYPE has dynamic values e.g. array bounds, try transforming values to
      static ones based on the address.  */
-  v->type = resolve_dynamic_values (type, address);
-  v->enclosing_type = v->type;
+  resolve_value_type (v, address);
 
   set_value_address (v, address);
   VALUE_LVAL (v) = lval_memory;

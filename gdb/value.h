@@ -156,6 +156,7 @@ extern int value_pointed_to_offset (struct value *value);
 extern void set_value_pointed_to_offset (struct value *value, int val);
 extern int value_embedded_offset (struct value *value);
 extern void set_value_embedded_offset (struct value *value, int val);
+extern void resolve_value_type (struct value *value, CORE_ADDR address);
 
 /* For lval_computed values, this structure holds functions used to
    retrieve and set the value (or portions of the value).

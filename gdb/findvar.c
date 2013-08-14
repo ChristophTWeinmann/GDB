@@ -632,7 +632,8 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
 	     SYMBOL_PRINT_NAME (var));
       break;
     }
-
+  /* TODO(kbo): this might go into the value constructor.  */
+  resolve_value_type (v, addr);
   VALUE_LVAL (v) = lval_memory;
   set_value_address (v, addr);
   return v;
