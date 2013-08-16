@@ -1850,42 +1850,9 @@ check_typedef (struct type *type)
 	       && (TYPE_CODE (range_type = TYPE_INDEX_TYPE (type))
               == TYPE_CODE_RANGE))
         {
-          /* TODO(sag): This part should be refactored into a function capable to
-             calculate the correct size of a type honoring upper/lower/stride.  */
-          if (static_bounds_p (TYPE_RANGE_DATA (range_type)))
+          if (static_bounds_p (TYPE_RANGE_DATA (range_type))) 
             {
-              /* Now recompute the length of the array type, based on its
-                 number of elements and the target type's length.
-                 Watch out for Ada null Ada arrays where the high bound
-                 is smaller than the low bound.  */
-              const LONGEST low_bound = TYPE_LOW_BOUND (range_type);
-              const LONGEST high_bound = TYPE_HIGH_BOUND (range_type);
-              ULONGEST len;
-
-              if (high_bound < low_bound)
-                len = 0;
-              else
-                {
-                  /* For now, we conservatively take the array length to be 0
-                     if its length exceeds UINT_MAX.  The code below assumes
-                     that for x < 0, (ULONGEST) x == -x + ULONGEST_MAX + 1,
-                     which is technically not guaranteed by C, but is usually true
-                     (because it would be true if x were unsigned with its
-                     high-order bit on).  It uses the fact that
-                     high_bound-low_bound is always representable in
-                     ULONGEST and that if high_bound-low_bound+1 overflows,
-                     it overflows to 0.  We must change these tests if we
-                     decide to increase the representation of TYPE_LENGTH
-                     from unsigned int to ULONGEST.  */
-                  ULONGEST ulow = low_bound, uhigh = high_bound;
-                  ULONGEST tlen = TYPE_LENGTH (target_type);
-
-                  len = tlen * (uhigh - ulow + 1);
-                  if (tlen == 0 || (len / tlen - 1 + ulow) != uhigh
-                      || len > UINT_MAX)
-                    len = 0;
-                }
-              TYPE_LENGTH (type) = len;
+              TYPE_LENGTH (type) = get_type_length (type);
               TYPE_TARGET_STUB (type) = 0;
             }
         }
@@ -1902,6 +1869,59 @@ check_typedef (struct type *type)
   TYPE_LENGTH (orig_type) = TYPE_LENGTH (type);
 
   return type;
+}
+
+/* Calculates the size of a type given the upper and lower bound of a dynamic
+   type.  */
+
+ULONGEST get_type_length (const struct type *type)
+{
+  const struct type *range_type, *target_type;
+  ULONGEST len = TYPE_LENGTH (type);
+  LONGEST low_bound, high_bound;
+
+  if (TYPE_CODE (type) != TYPE_CODE_ARRAY
+          && TYPE_CODE (type) != TYPE_CODE_STRING)
+    return len;
+
+  range_type = TYPE_INDEX_TYPE (type);
+
+  if (!static_bounds_p (TYPE_RANGE_DATA (range_type)))
+    return len;
+
+  target_type = check_typedef (TYPE_TARGET_TYPE (type));
+
+  /* Now recompute the length of the array type, based on its
+  number of elements and the target type's length.
+  Watch out for Ada null Ada arrays where the high bound
+  is smaller than the low bound.  */
+  low_bound = TYPE_LOW_BOUND (range_type);
+  high_bound = TYPE_HIGH_BOUND (range_type);
+
+  if (high_bound < low_bound)
+    len = 0;
+  else
+    {
+      /* For now, we conservatively take the array length to be 0
+         if its length exceeds UINT_MAX.  The code below assumes
+         that for x < 0, (ULONGEST) x == -x + ULONGEST_MAX + 1,
+         which is technically not guaranteed by C, but is usually true
+         (because it would be true if x were unsigned with its
+         high-order bit on).  It uses the fact that
+         high_bound-low_bound is always representable in
+         ULONGEST and that if high_bound-low_bound+1 overflows,
+         it overflows to 0.  We must change these tests if we
+         decide to increase the representation of TYPE_LENGTH
+         from unsigned int to ULONGEST.  */
+      ULONGEST ulow = low_bound, uhigh = high_bound;
+      ULONGEST tlen = TYPE_LENGTH (target_type);
+
+      len = tlen * (uhigh - ulow + 1);
+      if (tlen == 0 || (len / tlen - 1 + ulow) != uhigh || len > UINT_MAX)
+        len = 0;
+    }
+
+  return len;
 }
 
 /* Parse a type expression in the string [P..P+LENGTH).  If an error

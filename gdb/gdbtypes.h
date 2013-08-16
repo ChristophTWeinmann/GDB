@@ -1742,4 +1742,5 @@ extern struct type *copy_type (const struct type *type);
 
 extern int types_equal (struct type *, struct type *);
 
+ULONGEST get_type_length (const struct type *);
 #endif /* GDBTYPES_H */
