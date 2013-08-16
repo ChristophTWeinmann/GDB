@@ -2459,7 +2459,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
   switch (ctx->location)
     {
     case DWARF_VALUE_REGISTER:
-      /* TODO(sag): What should we do here?  */
+      *valp = dwarf_expr_read_reg (&baton, dwarf_expr_fetch_address (ctx, 0));
       break;
     case DWARF_VALUE_MEMORY:
       *valp = dwarf_expr_fetch_address (ctx, 0);
