@@ -2475,7 +2475,8 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 
 int dwarf2_address_data_valid (const struct type *type)
 {
-  // TODO (kbo): add associated
+  if (TYPE_ASSOCIATED_PROP (type) && !TYPE_ASSOCIATED (type))
+    return 0;
 
   if (TYPE_ALLOCATED_PROP (type) && !TYPE_ALLOCATED (type))
     return 0;

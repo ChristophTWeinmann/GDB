@@ -103,6 +103,8 @@ static void set_output_radix_1 (int, unsigned);
 
 static void val_print_not_allocated (struct ui_file *stream);
 
+static void val_print_not_associated (struct ui_file *stream);
+
 void _initialize_valprint (void);
 
 #define PRINT_MAX_DEFAULT 200	/* Start print_max off at this value.  */
@@ -309,6 +311,12 @@ valprint_check_validity (struct ui_file *stream,
 {
   CHECK_TYPEDEF (type);
 
+  if (TYPE_ASSOCIATED_PROP (type) && !TYPE_ASSOCIATED (type))
+    {
+      val_print_not_associated (stream);
+      return 0;
+    }
+
   if (TYPE_ALLOCATED_PROP (type) && !TYPE_ALLOCATED (type))
     {
       val_print_not_allocated (stream);
@@ -365,6 +373,12 @@ static void
 val_print_not_allocated (struct ui_file *stream)
 {
   fprintf_filtered (stream, _("<not allocated>"));
+}
+
+static void
+val_print_not_associated (struct ui_file *stream)
+{
+  fprintf_filtered (stream, _("<not associated>"));
 }
 
 /* A generic val_print that is suitable for use by language

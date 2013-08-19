@@ -1620,7 +1620,11 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
 
   prop = TYPE_ALLOCATED_PROP (type);
   if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
-      TYPE_ALLOCATED (resolved_type) = value;
+    TYPE_ALLOCATED (resolved_type) = value;
+
+  prop = TYPE_ASSOCIATED_PROP (type);
+  if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
+    TYPE_ASSOCIATED (resolved_type) = value;
 
   if (TYPE_CODE (type) != TYPE_CODE_ARRAY
       || TYPE_NFIELDS (type) == 0)
