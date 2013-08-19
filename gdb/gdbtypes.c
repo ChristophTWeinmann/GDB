@@ -1888,6 +1888,11 @@ ULONGEST get_type_length (const struct type *type)
           && TYPE_CODE (type) != TYPE_CODE_STRING)
     return len;
 
+  /* Check if the type is associated or allocated.  If not associated or
+     allocated return 0, as the dynamic type length is unknown.  */
+  if (!dwarf2_address_data_valid (type))
+    return 0;
+
   range_type = TYPE_INDEX_TYPE (type);
 
   if (!static_bounds_p (TYPE_RANGE_DATA (range_type)))
