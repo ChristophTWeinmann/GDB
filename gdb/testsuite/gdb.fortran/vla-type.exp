@@ -28,8 +28,8 @@ if ![runto MAIN__] then {
 # the debugger when accessing it.
 gdb_breakpoint [gdb_get_line_number "before-allocated"]
 gdb_continue_to_breakpoint "before-allocated"
-gdb_test "print twov" "\\$\\d+ = \\\( <object is not allocated>, <object is not allocated> \\\)" "print twov before allocated"
-gdb_test "print twov%ivla1" "\\$\\d+ = <object is not allocated>" "print twov%ivla1 before allocated"
+gdb_test "print twov" "\\$\\d+ = \\\( <not allocated>, <not allocated> \\\)" "print twov before allocated"
+gdb_test "print twov%ivla1" "\\$\\d+ = <not allocated>" "print twov%ivla1 before allocated"
 
 # Check type with one VLA's inside
 gdb_breakpoint [gdb_get_line_number "onev-filled"]

@@ -32,7 +32,7 @@ if ![runto MAIN__] then {
 # Set some breakpoints and print complete vla
 gdb_breakpoint [gdb_get_line_number "vla1-init"]
 gdb_continue_to_breakpoint "vla1-init"
-gdb_test "print vla1" "\\$\\d+ = <(object|the array) is not allocated>" "print non-allocated vla1"
+gdb_test "print vla1" "\\$\\d+ = <not allocated>" "print non-allocated vla1"
 
 gdb_breakpoint [gdb_get_line_number "vla2-allocated"]
 gdb_continue_to_breakpoint "vla2-allocated"
@@ -44,7 +44,7 @@ gdb_continue_to_breakpoint "vla1-filled"
 gdb_test "print vla1" "\\$\\d+ = \\( *\\( *\\( *1311, *1311, *1311,\[()1311, .\]*\\)" "print vla1 filled"
 
 # Try to access history values for full vla prints
-gdb_test "print \$1" "\\$\\d+ = <(object|the array) is not allocated>" "print \$1"
+gdb_test "print \$1" "\\$\\d+ = <not allocated>" "print \$1"
 gdb_test "print \$2" "\\$\\d+ = \\( *\\( *\\( *0, *0, *0,\[()0, .\]*\\)" "print \$2"
 gdb_test "print \$3" "\\$\\d+ = \\( *\\( *\\( *0, *0, *0,\[()0, .\]*\\)" "print \$3"
 gdb_test "print \$4" "\\$\\d+ = \\( *\\( *\\( *1311, *1311, *1311,\[()1311, .\]*\\)" "print \$4"

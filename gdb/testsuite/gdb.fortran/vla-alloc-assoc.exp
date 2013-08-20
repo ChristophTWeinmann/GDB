@@ -25,8 +25,8 @@ if ![runto MAIN__] then {
 }
 
 # check allocation status after run to main
-gdb_test "print vla1" "\\$\[0-9\]* = <object is not allocated>" "print deallocated vla1 after break main__"
-gdb_test "print vla2" "\\$\[0-9\]* = <object is not allocated>" "print deallocated vla2 after break main__"
+gdb_test "print vla1" "\\$\[0-9\]* = <not allocated>" "print deallocated vla1 after break main__"
+gdb_test "print vla2" "\\$\[0-9\]* = <not allocated>" "print deallocated vla2 after break main__"
 gdb_test "print l" "\\$\[0-9\]* = \\.FALSE\\." "print l initially"
 
 # Check the association status of various types of VLA's
@@ -55,9 +55,9 @@ gdb_test "print l" "\\$\[0-9\]* = \\.FALSE\\." "print pvla allocation status (de
 gdb_breakpoint [gdb_get_line_number "vla1-deallocated"]
 gdb_continue_to_breakpoint "vla1-deallocated"
 gdb_test "print l" "\\$\[0-9\]* = \\.FALSE\\." "print vla1 allocation status (deallocated)"
-gdb_test "print vla1" "\\$\[0-9\]* = <object is not allocated>" "print deallocated vla1"
+gdb_test "print vla1" "\\$\[0-9\]* = <not allocated>" "print deallocated vla1"
 
 gdb_breakpoint [gdb_get_line_number "vla2-deallocated"]
 gdb_continue_to_breakpoint "vla2-deallocated"
 gdb_test "print l" "\\$\[0-9\]* = \\.FALSE\\." "print vla2 deallocated"
-gdb_test "print vla2" "\\$\[0-9\]* = <object is not allocated>" "print deallocated vla2"
+gdb_test "print vla2" "\\$\[0-9\]* = <not allocated>" "print deallocated vla2"

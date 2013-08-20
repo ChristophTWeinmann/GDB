@@ -33,10 +33,10 @@ if ![runto MAIN__] then {
 # Try to access values in non allocated VLA
 gdb_breakpoint [gdb_get_line_number "vla1-init"]
 gdb_continue_to_breakpoint "vla1-init"
-gdb_test "print vla1" "\\$\\d+ = <(object|the array) is not allocated>" "print non-allocated vla1"
-gdb_test "print vla1(1,1,1)" "Cannot access it because the object is not allocated\\." "print member in non-allocated vla1 (1)"
-gdb_test "print vla1(101,202,303)" "Cannot access it because the object is not allocated\\." "print member in non-allocated vla1 (2)"
-gdb_test "print vla1(5,2,18)=1" "Cannot access it because the object is not allocated\\." "set member in non-allocated vla1"
+gdb_test "print vla1" "\\$\\d+ = <not allocated>" "print non-allocated vla1"
+gdb_test "print vla1(1,1,1)" "no such vector element because not allocated" "print member in non-allocated vla1 (1)"
+gdb_test "print vla1(101,202,303)" "no such vector element because not allocated" "print member in non-allocated vla1 (2)"
+gdb_test "print vla1(5,2,18)=1" "no such vector element because not allocated" "set member in non-allocated vla1"
 
 # Try to access value in allocated VLA
 gdb_breakpoint [gdb_get_line_number "vla2-allocated"]
@@ -54,8 +54,8 @@ gdb_test "print vla1(1, 3, 8)" "\\$\\d+ = 1001" "print allocated vla1(1,3,8) aft
 gdb_test "print vla1(9, 9, 9)" "\\$\\d+ = 999" "print allocated vla1(9,9,9) after assignment in debugger (filled)"
 
 # Try to access values in undefined pointer to VLA (dangling)
-gdb_test "print pvla" "\\$\\d+ = <object is not associated>" "print undefined pvla"
-gdb_test "print pvla(1, 3, 8)" "Cannot access it because the object is not associated\\." "print undefined pvla(1,3,8)"
+gdb_test "print pvla" "\\$\\d+ = <not associated>" "print undefined pvla"
+gdb_test "print pvla(1, 3, 8)" "no such vector element because not associated" "print undefined pvla(1,3,8)"
 
 # Try to access values in pointer to VLA and compare them
 gdb_breakpoint [gdb_get_line_number "pvla-associated"]
@@ -75,13 +75,13 @@ gdb_test "print vla2(7, 45, 14)" "\\$\\d+ = 2" "print vla2(7, 45, 14) after fill
 # Try to access values of dissasociated VLA pointer
 gdb_breakpoint [gdb_get_line_number "pvla-deassociated"]
 gdb_continue_to_breakpoint "pvla-deassociated"
-gdb_test "print pvla(5, 45, 20)" "Cannot access it because the object is not associated\\." "print pvla(5, 45, 20) after dissasociated"
-gdb_test "print pvla(7, 45, 14)" "Cannot access it because the object is not associated\\." "print pvla(7, 45, 14) after dissasociated"
-gdb_test "print pvla" "\\$\\d+ = <object is not associated>" "print vla1 after dissasociated"
+gdb_test "print pvla(5, 45, 20)" "no such vector element because not associated" "print pvla(5, 45, 20) after dissasociated"
+gdb_test "print pvla(7, 45, 14)" "no such vector element because not associated" "print pvla(7, 45, 14) after dissasociated"
+gdb_test "print pvla" "\\$\\d+ = <not associated>" "print vla1 after dissasociated"
 
 # Try to access values of deallocated VLA
 gdb_breakpoint [gdb_get_line_number "vla1-deallocated"]
 gdb_continue_to_breakpoint "vla1-deallocated"
-gdb_test "print vla1(3, 6, 9)" "Cannot access it because the object is not allocated\\." "print allocated vla1(3,6,9) after specific assignment (deallocated)"
-gdb_test "print vla1(1, 3, 8)" "Cannot access it because the object is not allocated\\." "print allocated vla1(1,3,8) after specific assignment (deallocated)"
-gdb_test "print vla1(9, 9, 9)" "Cannot access it because the object is not allocated\\." "print allocated vla1(9,9,9) after assignment in debugger (deallocated)"
+gdb_test "print vla1(3, 6, 9)" "no such vector element because not allocated" "print allocated vla1(3,6,9) after specific assignment (deallocated)"
+gdb_test "print vla1(1, 3, 8)" "no such vector element because not allocated" "print allocated vla1(1,3,8) after specific assignment (deallocated)"
+gdb_test "print vla1(9, 9, 9)" "no such vector element because not allocated" "print allocated vla1(9,9,9) after assignment in debugger (deallocated)"
