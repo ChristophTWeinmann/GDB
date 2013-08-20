@@ -30,6 +30,7 @@
 #include "gdbcore.h"
 #include "target.h"
 #include "f-lang.h"
+#include "valprint.h"
 
 #include "gdb_string.h"
 #include <errno.h>
@@ -55,6 +56,17 @@ f_print_type (struct type *type, const char *varstring, struct ui_file *stream,
 {
   enum type_code code;
   int demangled_args;
+
+  if (TYPE_ASSOCIATED_PROP (type) && !TYPE_ASSOCIATED (type))
+    {
+      val_print_not_associated (stream);
+      return;
+    }
+  if (TYPE_ALLOCATED_PROP (type) && !TYPE_ALLOCATED (type))
+    {
+      val_print_not_allocated (stream);
+      return;
+    }
 
   f_type_print_base (type, stream, show, level);
   code = TYPE_CODE (type);

@@ -101,10 +101,6 @@ static void set_output_radix (char *, int, struct cmd_list_element *);
 
 static void set_output_radix_1 (int, unsigned);
 
-static void val_print_not_allocated (struct ui_file *stream);
-
-static void val_print_not_associated (struct ui_file *stream);
-
 void _initialize_valprint (void);
 
 #define PRINT_MAX_DEFAULT 200	/* Start print_max off at this value.  */
@@ -369,13 +365,13 @@ val_print_invalid_address (struct ui_file *stream)
   fprintf_filtered (stream, _("<invalid address>"));
 }
 
-static void
+void
 val_print_not_allocated (struct ui_file *stream)
 {
   fprintf_filtered (stream, _("<not allocated>"));
 }
 
-static void
+void
 val_print_not_associated (struct ui_file *stream)
 {
   fprintf_filtered (stream, _("<not associated>"));
