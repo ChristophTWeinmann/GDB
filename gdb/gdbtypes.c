@@ -1548,12 +1548,13 @@ dynamic_type_p (const struct type *type)
   if (TYPE_ALLOCATED_PROP (type) != NULL)
     return 1;
 
-  if (TYPE_CODE (type) == TYPE_CODE_ARRAY && TYPE_NFIELDS (type) >= 1)
+  if ((TYPE_CODE (type) == TYPE_CODE_ARRAY ||
+          TYPE_CODE (type) == TYPE_CODE_STRING) && TYPE_NFIELDS (type) >= 1)
     {
       const struct type *range_type = TYPE_INDEX_TYPE (type);
 
       if (TYPE_CODE (range_type) == TYPE_CODE_RANGE)
-	return !static_bounds_p (TYPE_RANGE_DATA (range_type));
+        return !static_bounds_p (TYPE_RANGE_DATA (range_type));
     }
 
   return 0;
@@ -1603,8 +1604,12 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
   htab_t copied_types;
   CORE_ADDR value;
 
-  if (type == NULL || !dynamic_type_p (type))
-    return type;
+  /* If type does not have dynamic properties and is not a string, which might
+     might by dynamic.  */
+  if (type == NULL && !dynamic_type_p (type))
+    if (!TYPE_TARGET_TYPE (type) ||
+            TYPE_CODE (TYPE_TARGET_TYPE (type)) != TYPE_CODE_STRING)
+      return type;
 
   obstack_init (&obstack);
   cleanup = make_cleanup_obstack_free (&obstack);
@@ -1618,6 +1623,14 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
     TYPE_TARGET_TYPE (resolved_type) =
             resolve_dynamic_values (TYPE_TARGET_TYPE (resolved_type), address);
 
+  if (!dynamic_type_p (resolved_type))
+    {
+      if (TYPE_TARGET_TYPE (resolved_type) &&
+              TYPE_CODE (TYPE_TARGET_TYPE (resolved_type)) == TYPE_CODE_STRING)
+        return resolved_type;
+      return type;
+    }
+
   prop = TYPE_ALLOCATED_PROP (type);
   if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
     TYPE_ALLOCATED (resolved_type) = value;
@@ -1626,8 +1639,8 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
   if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
     TYPE_ASSOCIATED (resolved_type) = value;
 
-  if (TYPE_CODE (type) != TYPE_CODE_ARRAY
-      || TYPE_NFIELDS (type) == 0)
+  if ((TYPE_CODE (type) != TYPE_CODE_ARRAY
+      && TYPE_CODE (type) != TYPE_CODE_STRING) || TYPE_NFIELDS (type) == 0)
     return type;
 
   range_type = TYPE_INDEX_TYPE (resolved_type);
@@ -1849,11 +1862,15 @@ check_typedef (struct type *type)
         {
           /* Nothing we can do.  */
         }
+      /*
       else if (TYPE_CODE (type) == TYPE_CODE_ARRAY
 	       && TYPE_NFIELDS (type) == 1
 	       && (TYPE_CODE (range_type = TYPE_INDEX_TYPE (type))
-              == TYPE_CODE_RANGE))
+              == TYPE_CODE_RANGE))*/
+      else if (TYPE_CODE (type) == TYPE_CODE_ARRAY ||
+              TYPE_CODE (type) == TYPE_CODE_STRING)
         {
+          range_type = TYPE_INDEX_TYPE (type);
           if (static_bounds_p (TYPE_RANGE_DATA (range_type))) 
             {
               TYPE_LENGTH (type) = get_type_length (type);
