@@ -52,7 +52,6 @@
 #include <ctype.h>
 #include "gdb_string.h"
 
-#include "psymtab.h"
 #include "symfile.h"
 #include "python/python.h"
 
@@ -301,6 +300,27 @@ print_frame_arg (const struct frame_arg *arg)
   annotate_arg_end ();
 }
 
+/* Read in inferior function local SYM at FRAME into ARGP.  Caller is
+   responsible for xfree of ARGP->ERROR.  This function never throws an
+   exception.  */
+
+void
+read_frame_local (struct symbol *sym, struct frame_info *frame,
+		  struct frame_arg *argp)
+{
+  volatile struct gdb_exception except;
+  struct value *val = NULL;
+
+  TRY_CATCH (except, RETURN_MASK_ERROR)
+    {
+      val = read_var_value (sym, frame);
+    }
+
+  argp->error = (val == NULL) ? xstrdup (except.message) : NULL;
+  argp->sym = sym;
+  argp->val = val;
+}
+
 /* Read in inferior function parameter SYM at FRAME into ARGP.  Caller is
    responsible for xfree of ARGP->ERROR.  This function never throws an
    exception.  */
@@ -448,7 +468,10 @@ read_frame_arg (struct symbol *sym, struct frame_info *frame,
 	  || print_entry_values == print_entry_values_both
 	  || (print_entry_values == print_entry_values_preferred
 	      && (!val || value_optimized_out (val))))
-	entryval = allocate_optimized_out_value (SYMBOL_TYPE (sym));
+	{
+	  entryval = allocate_optimized_out_value (SYMBOL_TYPE (sym));
+	  entryval_error = NULL;
+	}
     }
   if ((print_entry_values == print_entry_values_compact
        || print_entry_values == print_entry_values_if_needed

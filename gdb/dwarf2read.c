@@ -558,6 +558,16 @@ struct dwarf2_per_cu_data
      attributes in the stub.  */
   unsigned int reading_dwo_directly : 1;
 
+  /* Non-zero if the TU has been read.
+     This is used to assist the "Stay in DWO Optimization" for Fission:
+     When reading a DWO, it's faster to read TUs from the DWO instead of
+     fetching them from random other DWOs (due to comdat folding).
+     If the TU has already been read, the optimization is unnecessary
+     (and unwise - we don't want to change where gdb thinks the TU lives
+     "midflight").
+     This flag is only valid if is_debug_types is true.  */
+  unsigned int tu_read : 1;
+
   /* The section this CU/TU lives in.
      If the DIE refers to a DWO file, this is always the original die,
      not the DWO file.  */
@@ -2572,17 +2582,24 @@ create_addrmap_from_index (struct objfile *objfile, struct mapped_index *index)
       cu_index = extract_unsigned_integer (iter, 4, BFD_ENDIAN_LITTLE);
       iter += 4;
 
-      if (cu_index < dwarf2_per_objfile->n_comp_units)
+      if (lo > hi)
 	{
-	  addrmap_set_empty (mutable_map, lo + baseaddr, hi + baseaddr - 1,
-			     dw2_get_cu (cu_index));
+	  complaint (&symfile_complaints,
+		     _(".gdb_index address table has invalid range (%s - %s)"),
+		     hex_string (lo), hex_string (hi));
+	  continue;
 	}
-      else
+
+      if (cu_index >= dwarf2_per_objfile->n_comp_units)
 	{
 	  complaint (&symfile_complaints,
 		     _(".gdb_index address table has invalid CU number %u"),
 		     (unsigned) cu_index);
+	  continue;
 	}
+
+      addrmap_set_empty (mutable_map, lo + baseaddr, hi + baseaddr - 1,
+			 dw2_get_cu (cu_index));
     }
 
   objfile->psymtabs_addrmap = addrmap_create_fixed (mutable_map,
@@ -3352,10 +3369,25 @@ dw2_print_stats (struct objfile *objfile)
   printf_filtered (_("  Number of unread CUs: %d\n"), count);
 }
 
+/* This dumps minimal information about the index.
+   It is called via "mt print objfiles".
+   One use is to verify .gdb_index has been loaded by the
+   gdb.dwarf2/gdb-index.exp testcase.  */
+
 static void
 dw2_dump (struct objfile *objfile)
 {
-  /* Nothing worth printing.  */
+  dw2_setup (objfile);
+  gdb_assert (dwarf2_per_objfile->using_index);
+  printf_filtered (".gdb_index:");
+  if (dwarf2_per_objfile->index_table != NULL)
+    {
+      printf_filtered (" version %d\n",
+		       dwarf2_per_objfile->index_table->version);
+    }
+  else
+    printf_filtered (" faked for \"readnow\"\n");
+  printf_filtered ("\n");
 }
 
 static void
@@ -3445,83 +3477,6 @@ dw2_expand_symtabs_with_fullname (struct objfile *objfile,
 	    }
 	}
     }
-}
-
-/* A helper function for dw2_find_symbol_file that finds the primary
-   file name for a given CU.  This is a die_reader_func.  */
-
-static void
-dw2_get_primary_filename_reader (const struct die_reader_specs *reader,
-				 const gdb_byte *info_ptr,
-				 struct die_info *comp_unit_die,
-				 int has_children,
-				 void *data)
-{
-  const char **result_ptr = data;
-  struct dwarf2_cu *cu = reader->cu;
-  struct attribute *attr;
-
-  attr = dwarf2_attr (comp_unit_die, DW_AT_name, cu);
-  if (attr == NULL)
-    *result_ptr = NULL;
-  else
-    *result_ptr = DW_STRING (attr);
-}
-
-static const char *
-dw2_find_symbol_file (struct objfile *objfile, const char *name)
-{
-  struct dwarf2_per_cu_data *per_cu;
-  offset_type *vec;
-  const char *filename;
-
-  dw2_setup (objfile);
-
-  /* index_table is NULL if OBJF_READNOW.  */
-  if (!dwarf2_per_objfile->index_table)
-    {
-      struct symtab *s;
-
-      ALL_OBJFILE_PRIMARY_SYMTABS (objfile, s)
-	{
-	  struct blockvector *bv = BLOCKVECTOR (s);
-	  const struct block *block = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
-	  struct symbol *sym = lookup_block_symbol (block, name, VAR_DOMAIN);
-
-	  if (sym)
-	    {
-	      /* Only file extension of returned filename is recognized.  */
-	      return SYMBOL_SYMTAB (sym)->filename;
-	    }
-	}
-      return NULL;
-    }
-
-  if (!find_slot_in_mapped_hash (dwarf2_per_objfile->index_table,
-				 name, &vec))
-    return NULL;
-
-  /* Note that this just looks at the very first one named NAME -- but
-     actually we are looking for a function.  find_main_filename
-     should be rewritten so that it doesn't require a custom hook.  It
-     could just use the ordinary symbol tables.  */
-  /* vec[0] is the length, which must always be >0.  */
-  per_cu = dw2_get_cu (GDB_INDEX_CU_VALUE (MAYBE_SWAP (vec[1])));
-
-  if (per_cu->v.quick->symtab != NULL)
-    {
-      /* Only file extension of returned filename is recognized.  */
-      return per_cu->v.quick->symtab->filename;
-    }
-
-  /* Initialize filename in case there's a problem reading the DWARF,
-     dw2_get_primary_filename_reader may not get called.  */
-  filename = NULL;
-  init_cutu_and_read_dies (per_cu, NULL, 0, 0,
-			   dw2_get_primary_filename_reader, &filename);
-
-  /* Only file extension of returned filename is recognized.  */
-  return filename;
 }
 
 static void
@@ -3847,7 +3802,6 @@ const struct quick_symbol_functions dwarf2_gdb_index_functions =
   dw2_expand_symtabs_for_function,
   dw2_expand_all_symtabs,
   dw2_expand_symtabs_with_fullname,
-  dw2_find_symbol_file,
   dw2_map_matching_symbols,
   dw2_expand_symtabs_matching,
   dw2_find_pc_sect_symtab,
@@ -4455,11 +4409,7 @@ fill_in_sig_entry_from_dwo_entry (struct objfile *objfile,
 				  struct signatured_type *sig_entry,
 				  struct dwo_unit *dwo_entry)
 {
-  sig_entry->per_cu.section = dwo_entry->section;
-  sig_entry->per_cu.offset = dwo_entry->offset;
-  sig_entry->per_cu.length = dwo_entry->length;
-  sig_entry->per_cu.reading_dwo_directly = 1;
-  sig_entry->per_cu.objfile = objfile;
+  /* Make sure we're not clobbering something we don't expect to.  */
   gdb_assert (! sig_entry->per_cu.queued);
   gdb_assert (sig_entry->per_cu.cu == NULL);
   gdb_assert (sig_entry->per_cu.v.quick != NULL);
@@ -4467,19 +4417,26 @@ fill_in_sig_entry_from_dwo_entry (struct objfile *objfile,
   gdb_assert (sig_entry->signature == dwo_entry->signature);
   gdb_assert (sig_entry->type_offset_in_section.sect_off == 0);
   gdb_assert (sig_entry->type_unit_group == NULL);
+  gdb_assert (sig_entry->dwo_unit == NULL);
+
+  sig_entry->per_cu.section = dwo_entry->section;
+  sig_entry->per_cu.offset = dwo_entry->offset;
+  sig_entry->per_cu.length = dwo_entry->length;
+  sig_entry->per_cu.reading_dwo_directly = 1;
+  sig_entry->per_cu.objfile = objfile;
   sig_entry->type_offset_in_tu = dwo_entry->type_offset_in_tu;
   sig_entry->dwo_unit = dwo_entry;
 }
 
 /* Subroutine of lookup_signatured_type.
-   Create the signatured_type data structure for a TU to be read in
-   directly from a DWO file, bypassing the stub.
-   We do this for the case where there is no DWP file and we're using
-   .gdb_index: When reading a CU we want to stay in the DWO file containing
-   that CU.  Otherwise we could end up reading several other DWO files (due
-   to comdat folding) to process the transitive closure of all the mentioned
-   TUs, and that can be slow.  The current DWO file will have every type
-   signature that it needs.
+   If we haven't read the TU yet, create the signatured_type data structure
+   for a TU to be read in directly from a DWO file, bypassing the stub.
+   This is the "Stay in DWO Optimization": When there is no DWP file and we're
+   using .gdb_index, then when reading a CU we want to stay in the DWO file
+   containing that CU.  Otherwise we could end up reading several other DWO
+   files (due to comdat folding) to process the transitive closure of all the
+   mentioned TUs, and that can be slow.  The current DWO file will have every
+   type signature that it needs.
    We only do this for .gdb_index because in the psymtab case we already have
    to read all the DWOs to build the type unit groups.  */
 
@@ -4508,8 +4465,13 @@ lookup_dwo_signatured_type (struct dwarf2_cu *cu, ULONGEST sig)
   sig_entry = htab_find (dwarf2_per_objfile->signatured_types, &find_sig_entry);
   if (sig_entry == NULL)
     return NULL;
+
+  /* We can get here with the TU already read, *or* in the process of being
+     read.  Don't reassign it if that's the case.  Also note that if the TU is
+     already being read, it may not have come from a DWO, the program may be
+     a mix of Fission-compiled code and non-Fission-compiled code.  */
   /* Have we already tried to read this TU?  */
-  if (sig_entry->dwo_unit != NULL)
+  if (sig_entry->per_cu.tu_read)
     return sig_entry;
 
   /* Ok, this is the first time we're reading this TU.  */
@@ -5695,6 +5657,21 @@ create_partial_symtab (struct dwarf2_per_cu_data *per_cu, const char *name)
   return pst;
 }
 
+/* The DATA object passed to process_psymtab_comp_unit_reader has this
+   type.  */
+
+struct process_psymtab_comp_unit_data
+{
+  /* True if we are reading a DW_TAG_partial_unit.  */
+
+  int want_partial_unit;
+
+  /* The "pretend" language that is used if the CU doesn't declare a
+     language.  */
+
+  enum language pretend_language;
+};
+
 /* die_reader_func for process_psymtab_comp_unit.  */
 
 static void
@@ -5713,16 +5690,14 @@ process_psymtab_comp_unit_reader (const struct die_reader_specs *reader,
   struct partial_symtab *pst;
   int has_pc_info;
   const char *filename;
-  int *want_partial_unit_ptr = data;
+  struct process_psymtab_comp_unit_data *info = data;
 
-  if (comp_unit_die->tag == DW_TAG_partial_unit
-      && (want_partial_unit_ptr == NULL
-	  || !*want_partial_unit_ptr))
+  if (comp_unit_die->tag == DW_TAG_partial_unit && !info->want_partial_unit)
     return;
 
   gdb_assert (! per_cu->is_debug_types);
 
-  prepare_one_comp_unit (cu, comp_unit_die, language_minimal);
+  prepare_one_comp_unit (cu, comp_unit_die, info->pretend_language);
 
   cu->list_in_scope = &file_symbols;
 
@@ -5837,8 +5812,11 @@ process_psymtab_comp_unit_reader (const struct die_reader_specs *reader,
 
 static void
 process_psymtab_comp_unit (struct dwarf2_per_cu_data *this_cu,
-			   int want_partial_unit)
+			   int want_partial_unit,
+			   enum language pretend_language)
 {
+  struct process_psymtab_comp_unit_data info;
+
   /* If this compilation unit was already read in, free the
      cached copy in order to read it in again.	This is
      necessary because we skipped some symbols when we first
@@ -5848,9 +5826,11 @@ process_psymtab_comp_unit (struct dwarf2_per_cu_data *this_cu,
     free_one_cached_comp_unit (this_cu);
 
   gdb_assert (! this_cu->is_debug_types);
+  info.want_partial_unit = want_partial_unit;
+  info.pretend_language = pretend_language;
   init_cutu_and_read_dies (this_cu, NULL, 0, 0,
 			   process_psymtab_comp_unit_reader,
-			   &want_partial_unit);
+			   &info);
 
   /* Age out any secondary CUs.  */
   age_cached_comp_units ();
@@ -6028,7 +6008,7 @@ dwarf2_build_psymtabs_hard (struct objfile *objfile)
     {
       struct dwarf2_per_cu_data *per_cu = dw2_get_cu (i);
 
-      process_psymtab_comp_unit (per_cu, 0);
+      process_psymtab_comp_unit (per_cu, 0, language_minimal);
     }
 
   set_partial_user (objfile);
@@ -6250,7 +6230,7 @@ scan_partial_symbols (struct partial_die_info *first_die, CORE_ADDR *lowpc,
 
 		/* Go read the partial unit, if needed.  */
 		if (per_cu->v.psymtab == NULL)
-		  process_psymtab_comp_unit (per_cu, 1);
+		  process_psymtab_comp_unit (per_cu, 1, cu->language);
 
 		VEC_safe_push (dwarf2_per_cu_ptr,
 			       cu->per_cu->imported_symtabs, per_cu);
@@ -7366,12 +7346,14 @@ get_symtab (struct dwarf2_per_cu_data *per_cu)
    included by PER_CU.  */
 
 static void
-recursively_compute_inclusions (VEC (dwarf2_per_cu_ptr) **result,
-				htab_t all_children,
-				struct dwarf2_per_cu_data *per_cu)
+recursively_compute_inclusions (VEC (symtab_ptr) **result,
+				htab_t all_children, htab_t all_type_symtabs,
+				struct dwarf2_per_cu_data *per_cu,
+				struct symtab *immediate_parent)
 {
   void **slot;
   int ix;
+  struct symtab *symtab;
   struct dwarf2_per_cu_data *iter;
 
   slot = htab_find_slot (all_children, per_cu, INSERT);
@@ -7383,13 +7365,37 @@ recursively_compute_inclusions (VEC (dwarf2_per_cu_ptr) **result,
 
   *slot = per_cu;
   /* Only add a CU if it has a symbol table.  */
-  if (get_symtab (per_cu) != NULL)
-    VEC_safe_push (dwarf2_per_cu_ptr, *result, per_cu);
+  symtab = get_symtab (per_cu);
+  if (symtab != NULL)
+    {
+      /* If this is a type unit only add its symbol table if we haven't
+	 seen it yet (type unit per_cu's can share symtabs).  */
+      if (per_cu->is_debug_types)
+	{
+	  slot = htab_find_slot (all_type_symtabs, symtab, INSERT);
+	  if (*slot == NULL)
+	    {
+	      *slot = symtab;
+	      VEC_safe_push (symtab_ptr, *result, symtab);
+	      if (symtab->user == NULL)
+		symtab->user = immediate_parent;
+	    }
+	}
+      else
+	{
+	  VEC_safe_push (symtab_ptr, *result, symtab);
+	  if (symtab->user == NULL)
+	    symtab->user = immediate_parent;
+	}
+    }
 
   for (ix = 0;
        VEC_iterate (dwarf2_per_cu_ptr, per_cu->imported_symtabs, ix, iter);
        ++ix)
-    recursively_compute_inclusions (result, all_children, iter);
+    {
+      recursively_compute_inclusions (result, all_children,
+				      all_type_symtabs, iter, symtab);
+    }
 }
 
 /* Compute the symtab 'includes' fields for the symtab related to
@@ -7403,9 +7409,10 @@ compute_symtab_includes (struct dwarf2_per_cu_data *per_cu)
   if (!VEC_empty (dwarf2_per_cu_ptr, per_cu->imported_symtabs))
     {
       int ix, len;
-      struct dwarf2_per_cu_data *iter;
-      VEC (dwarf2_per_cu_ptr) *result_children = NULL;
-      htab_t all_children;
+      struct dwarf2_per_cu_data *per_cu_iter;
+      struct symtab *symtab_iter;
+      VEC (symtab_ptr) *result_symtabs = NULL;
+      htab_t all_children, all_type_symtabs;
       struct symtab *symtab = get_symtab (per_cu);
 
       /* If we don't have a symtab, we can just skip this case.  */
@@ -7414,28 +7421,33 @@ compute_symtab_includes (struct dwarf2_per_cu_data *per_cu)
 
       all_children = htab_create_alloc (1, htab_hash_pointer, htab_eq_pointer,
 					NULL, xcalloc, xfree);
+      all_type_symtabs = htab_create_alloc (1, htab_hash_pointer, htab_eq_pointer,
+					    NULL, xcalloc, xfree);
 
       for (ix = 0;
 	   VEC_iterate (dwarf2_per_cu_ptr, per_cu->imported_symtabs,
-			ix, iter);
+			ix, per_cu_iter);
 	   ++ix)
-	recursively_compute_inclusions (&result_children, all_children, iter);
+	{
+	  recursively_compute_inclusions (&result_symtabs, all_children,
+					  all_type_symtabs, per_cu_iter,
+					  symtab);
+	}
 
-      /* Now we have a transitive closure of all the included CUs, and
-	 for .gdb_index version 7 the included TUs, so we can convert it
-	 to a list of symtabs.  */
-      len = VEC_length (dwarf2_per_cu_ptr, result_children);
+      /* Now we have a transitive closure of all the included symtabs.  */
+      len = VEC_length (symtab_ptr, result_symtabs);
       symtab->includes
 	= obstack_alloc (&dwarf2_per_objfile->objfile->objfile_obstack,
 			 (len + 1) * sizeof (struct symtab *));
       for (ix = 0;
-	   VEC_iterate (dwarf2_per_cu_ptr, result_children, ix, iter);
+	   VEC_iterate (symtab_ptr, result_symtabs, ix, symtab_iter);
 	   ++ix)
-	symtab->includes[ix] = get_symtab (iter);
+	symtab->includes[ix] = symtab_iter;
       symtab->includes[len] = NULL;
 
-      VEC_free (dwarf2_per_cu_ptr, result_children);
+      VEC_free (symtab_ptr, result_symtabs);
       htab_delete (all_children);
+      htab_delete (all_type_symtabs);
     }
 }
 
@@ -18666,6 +18678,7 @@ read_signatured_type (struct signatured_type *sig_type)
 
   init_cutu_and_read_dies (per_cu, NULL, 0, 1,
 			   read_signatured_type_reader, NULL);
+  sig_type->per_cu.tu_read = 1;
 }
 
 /* Decode simple location descriptions.
@@ -19027,19 +19040,16 @@ macro_start_file (int file, int line,
   /* File name relative to the compilation directory of this source file.  */
   char *file_name = file_file_name (file, lh);
 
-  /* We don't create a macro table for this compilation unit
-     at all until we actually get a filename.  */
-  if (! pending_macros)
-    pending_macros = new_macro_table (&objfile->per_bfd->storage_obstack,
-				      objfile->per_bfd->macro_cache,
-				      comp_dir);
-
   if (! current_file)
     {
+      /* Note: We don't create a macro table for this compilation unit
+	 at all until we actually get a filename.  */
+      struct macro_table *macro_table = get_macro_table (objfile, comp_dir);
+
       /* If we have no current file, then this must be the start_file
 	 directive for the compilation unit's main source file.  */
-      current_file = macro_set_main (pending_macros, file_name);
-      macro_define_special (pending_macros);
+      current_file = macro_set_main (macro_table, file_name);
+      macro_define_special (macro_table);
     }
   else
     current_file = macro_include (current_file, line, file_name);
@@ -21381,14 +21391,14 @@ write_psymtabs_to_index (struct objfile *objfile, const char *dir)
   htab_t cu_index_htab;
   struct psymtab_cu_index_map *psymtab_cu_index_map;
 
-  if (!objfile->psymtabs || !objfile->psymtabs_addrmap)
-    return;
-
   if (dwarf2_per_objfile->using_index)
     error (_("Cannot use an index to create the index"));
 
   if (VEC_length (dwarf2_section_info_def, dwarf2_per_objfile->types) > 1)
     error (_("Cannot make an index when the file has multiple .debug_types sections"));
+
+  if (!objfile->psymtabs || !objfile->psymtabs_addrmap)
+    return;
 
   if (stat (objfile->name, &st) < 0)
     perror_with_name (objfile->name);

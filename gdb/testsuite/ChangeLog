@@ -1,3 +1,250 @@
+2013-08-27  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/entry-values.exp: Test unavailable entry value is
+	not shown when option '--skip-unavailable' is specified.
+	* gdb.trace/mi-trace-unavailable.exp (test_trace_unavailable):
+	Add tests for new option '--skip-unavailable'.
+
+2013-08-27  Yao Qi  <yao@codesourcery.com>
+
+	* lib/gdb.exp (gdb_remote_download): Don't pass $tofile to
+	remote_download if it is empty.
+
+2013-08-26  Doug Evans  <dje@google.com>
+
+	PR symtab/15885
+	* gdb.dwarf2/Makefile.in (EXECUTABLES): Add gdb-index.
+	(clean): rm -f *.gdb-index *.with-index.
+	* gdb.dwarf2/gdb-index.exp: New testcase.
+
+	* lib/gdb.exp (run_on_host): Moved here from gnu-debugdata.exp.
+	* gdb.base/gnu-debugdata.exp (run): Moved to gdb.exp and renamed to
+	run_on_host.  All callers updated.
+
+2013-08-24  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/entry-values.c (end): New
+	(main): Call end.
+	* gdb.trace/entry-values.exp: Load trace-support.exp.  Set
+	tracepoint and collect data.  Test entry value is unavailable.
+
+2013-08-24  Yao Qi  <yao@codesourcery.com>
+
+	* lib/dwarf.exp (_location): Handle DW_OP_deref_size.
+	* gdb.trace/entry-values.c: New.
+	* gdb.trace/entry-values.exp: New.
+
+2013-07-12  Muhammad Waqas  <mwaqas@codesourccery.com>
+
+	PR gdb/15501
+	* gdb.base/ena-dis-br.exp: Add test to verify
+ 	enable/disable commands work correctly with
+	multiple arguments that include multiple locations.
+
+2013-08-22  Samuel Bronson  <naesten@gmail.com>
+
+	ARM Linux support for `catch syscall'.
+	* gdb.base/catch-syscall.exp: Test this on ARM now.
+	(fill_all_syscalls_numbers): ARM has close/chroot on 6/61, too.
+
+2013-08-22  Tom Tromey  <tromey@redhat.com>
+
+	* lib/dwarf.exp (cu, tu): Handle addr_size of "default".  Change
+	default addr_size.
+	* lib/gdb.exp (is_64_target): New gdb_caching_proc.
+
+2013-08-22  Tom Tromey  <tromey@redhat.com>
+
+	* lib/gdb.exp (skip_btrace_tests): Use gdb_caching_proc and
+	standard_temp_file.
+
+2013-08-22  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.arch/amd64-byte.exp: Use standard_testfile,
+	clean_restart.
+	* gdb.arch/amd64-disp-step.exp: Use standard_testfile.
+	* gdb.arch/amd64-dword.exp: Use standard_testfile,
+	clean_restart.
+	* gdb.arch/amd64-entry-value-param.exp: Use standard_testfile.
+	* gdb.arch/amd64-entry-value.exp: Use standard_testfile.
+	* gdb.arch/amd64-prologue-xmm.exp: Use standard_testfile.
+	* gdb.arch/amd64-word.exp: Use standard_testfile,
+	clean_restart.
+	* gdb.arch/i386-avx.exp: Use standard_testfile, clean_restart.
+	* gdb.arch/i386-byte.exp: Use standard_testfile, clean_restart.
+	* gdb.arch/i386-disp-step.exp: Use standard_testfile.
+	* gdb.arch/i386-dr3-watch.exp: Use standard_testfile.
+	* gdb.arch/i386-permbkpt.exp: Use standard_testfile, clean_restart.
+	* gdb.arch/i386-signal.exp: Use standard_testfile.
+	* gdb.arch/i386-size-overlap.exp: Use standard_testfile, clean_restart.
+	* gdb.arch/i386-sse.exp: Use standard_testfile, clean_restart.
+	* gdb.arch/i386-unwind.exp: Use standard_testfile.
+	* gdb.arch/i386-word.exp: Use standard_testfile, clean_restart.
+
+2013-08-22  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.python/py-error.exp: Use gdb_remote_download.
+	* gdb.python/py-mi.exp: Use gdb_remote_download.
+	* gdb.python/py-objfile-script.exp: Use standard_output_file.
+	* gdb.python/py-prettyprint.exp: Use gdb_remote_download.
+	(run_lang_tests): Likewise.
+	* gdb.python/py-section-script.c: Use SCRIPT_FILE rather than
+	filename.
+	* gdb.python/py-section-script.exp: Set SCRIPT_FILE when
+	compiling.  Use gdb_remote_download.  Update some tests.
+	* gdb.python/py-strfns.exp (test_strfns_core_file): Use
+	standard_output_file.
+	* gdb.python/py-typeprint.exp: Use gdb_remote_download.
+	* gdb.python/py-frame-args.exp: Use gdb_remote_download.
+	* gdb.python/py-framefilter-mi.exp: Use gdb_remote_download.
+	* gdb.python/py-framefilter.exp: Use gdb_remote_download,
+	standard_output_file.
+
+2013-08-22  Tom Tromey  <tromey@redhat.com>
+
+       * lib/cell.exp (skip_cell_tests): Use standard_temp_file.
+
+2013-08-22  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.dwarf2/dw2-basic.exp: Use gdb_remote_download.
+	* gdb.dwarf2/dw2-compressed.exp: Use gdb_remote_download.
+	* gdb.dwarf2/dw2-intercu.exp: Use gdb_remote_download.
+	* gdb.dwarf2/dw2-intermix.exp: Use gdb_remote_download.
+	* gdb.dwarf2/dw2-producer.exp: Use gdb_remote_download.
+	* gdb.dwarf2/mac-fileno.exp: Use gdb_remote_download.
+	* lib/gdb.exp (gdb_remote_download): New proc.
+
+2013-08-22  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.dwarf2/clztest.exp: Use standard_testfile.
+	* gdb.dwarf2/dw2-minsym-in-cu.exp: Use standard_testfile.
+	* gdb.dwarf2/fission-base.S: Remove directory from
+	DW_AT_GNU_dwo_name.
+	* gdb.dwarf2/fission-base.exp: Use build_executable.  Set
+	debug-file-directory.
+	* gdb.dwarf2/fission-reread.S: Remove directory from
+	DW_AT_GNU_dwo_name.
+	* gdb.dwarf2/fission-reread.exp: Use build_executable.  Set
+	debug-file-directory.
+
+2013-08-16  Doug Evans  <dje@google.com>
+
+	* lib/prelink-support.exp (prelink_yes): Flag test as unsupported if
+	prelink complains about an unhandled DWARF version.
+
+2013-08-14  Cary Coutant  <ccoutant@google.com>
+
+	* boards/fission.exp: Add -fdebug-types-section to debug_flags.
+
+2013-08-13  Tom Tromey  <tromey@redhat.com>
+	    Yao Qi  <yao@codesourcery.com>
+
+	* lib/cache.exp (gdb_do_cache): Handle GDB_PARALLEL.
+	* lib/gdb.exp: Handle GDB_PARALLEL.
+	(default_gdb_version): Kill inotify_pid if it exists.
+	(default_gdb_exit): Emit warning if the inotify log is not
+	empty.
+	(standard_output_file): Respect GDB_PARALLEL.
+	(standard_temp_file): Likewise.
+	(gdb_init): Start inotifywait if requested.
+
+2013-08-13  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb.base/printcmds.exp (test_printf): Add test for printf of
+	pointer with various flags.
+
+2013-08-13  Tom Tromey  <tromey@redhat.com>
+
+	* lib/cache.exp: New file.
+	* lib/cell.exp (skip_cell_tests): Use gdb_caching_proc.
+	* lib/gdb.exp: Load cache.exp.
+	(support_complex_tests, is_ilp32_target, is_lp64_target)
+	(is_amd64_regs_target, skip_altivec_tests, skip_vsx_tests)
+	(gdb_skip_xml_test): Use gdb_caching_proc.
+	* lib/opencl.exp (skip_opencl_tests): Use gdb_caching_proc.
+
+2013-08-13  Tom Tromey  <tromey@redhat.com>
+
+	* lib/gdb.exp (standard_temp_file): New proc.
+	(support_complex_tests, is_ilp32_target, is_lp64_target)
+	(is_amd64_regs_target, skip_altivec_tests, skip_vsx_tests): Use
+	standard_temp_file.
+
+2013-08-13  Tom Tromey  <tromey@redhat.com>
+
+	* lib/gdb.exp (build_id_debug_filename_get): Use
+	standard_output_file.
+	* lib/prelink-support.exp (section_get)
+	(build_executable_own_libs): Use standard_output_file.
+
+2013-08-12  Tom Tromey  <tromey@redhat.com>
+
+	* Makefile.in (ALL_SUBDIRS): Add gdb.go.
+
+2013-08-12  Ali Anwar  <alianwar@codesourcery.com>
+
+	* gdb.base/break.exp: Test break via convenience variable
+	with file name.
+
+2013-08-09  Doug Evans  <dje@google.com>
+
+	* lib/future.exp (gdb_find_ldd): New proc.
+	* lib/prelink-support.exp (build_executable_own_libs): Call it.
+	Make "/usr/sbin/" in prelink path optional.
+
+2013-08-09  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/collection.exp (gdb_collect_args_test): Set
+	"only" and "both" to 'print entry-values' before selecting
+	trace frame.
+
+2013-08-08  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.trace/mi-trace-unavailable.exp: Don't set
+	"print entry-values" to "no".
+	(test_trace_unavailable): Set various values to
+	"print entry-values" to test that the output of
+	'-stack-list-locals' is not affected, and then set
+	set "print entry-values" to "no".
+
+2013-08-07  Doug Evans  <dje@google.com>
+
+	* gdb.python/py-value-cc.cc: Renamed from py-value.cc.
+	* gdb.python/py-value-cc.exp: Update.
+	* gdb.python/py-value.exp: Use different names for .o files for
+	C and C++.  Only perform C++ tests if !skip_cplus_tests.
+
+2013-08-07  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.base/maint.exp: Allow zero symtabs to be expanded.
+
+2013-08-07  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.dwarf2/dwz.exp: New file.
+
+2013-08-02  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.base/watchpoint.c (struct foo5): New.
+	(nullptr): New global.
+	* gdb.base/watchpoint.exp (test_watch_location): Add test.
+
+2013-08-01  Doug Evans  <dje@google.com>
+
+	PR symtab/15691
+	* gdb.dwarf2/fission-mix.exp: New file.
+	* gdb.dwarf2/fission-mix.h: New file.
+	* gdb.dwarf2/fission-mix.c: New file.
+	* gdb.dwarf2/fission-mix2.c: New file.
+
+	PR symtab/15695
+	* gdb.base/func-ptr.exp: New file.
+	* gdb.base/func-ptr.c: New file.
+
+2013-08-01  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.python/py-sync-interp.c: New.
+	* gdb.python/py-sync-interp.exp: New.
+
 2013-07-31  Yao Qi  <yao@codesourcery.com>
 
 	* gdb.trace/backtrace.exp (gdb_backtrace_tdp_4): Test command

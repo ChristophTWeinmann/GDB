@@ -1,3 +1,59 @@
+2013-08-22  Luis Machado  <lgustavo@codesourcery.com>
+
+	* Makefile.in: Explain why ../target and ../nat are not
+	listed as include file search paths.
+	(linux-waitpid.o): New object file rule.
+	* configure.srv (srv_native_linux_obj): New variable.
+	Replace all occurrences of linux native object files with
+	$srv_native_linux_obj.
+	* linux-low.c: Include nat/linux-nat.h and nat/linux-waitpid.h.
+	(HAS_NOMMU): Move defining logic to common/linux-ptrace.c.
+	(linux_enable_event_reporting): Remove declaration.
+	(my_waitpid): Moved to common/linux-waitpid.c.
+	(linux_wait_for_event): Pass ptid when calling
+	linux_enable_event_reporting.
+	(linux_supports_tracefork_flag): Remove.
+	(linux_enable_event_reporting): Likewise.
+	(linux_tracefork_grandchild): Remove.
+	(STACK_SIZE): Moved to common/linux-ptrace.c.
+	(linux_tracefork_child): Remove.
+	(linux_test_for_tracefork): Remove.
+	(linux_look_up_symbols): Call linux_supports_traceclone.
+	(initialize_low): Remove call to linux_test_for_tracefork.
+	* linux-low.h (PTRACE_TYPE_ARG3): Move to
+	common/linux-ptrace.h.
+	(PTRACE_TYPE_ARG4): Likewise.
+	Include linux-ptrace.h.
+
+2013-08-21  Pedro Alves  <palves@redhat.com>
+
+	* config.in: Renegerate.
+
+2013-08-19  Luis Machado  <lgustavo@codesourcery.com>
+
+	* Makefile.in (INCLUDE_CFLAGS): Include -I$(srcdir)/../.
+	(SFILES): Remove $(srcdir)/common/target-common.c and
+	add $(srcdir)/target/waitstatus.c.
+	(OBS): Remove target-common.o and add waitstatus.o.
+	(server_h): Remove $(srcdir)/../common/target-common.h and
+	add $(srcdir)/../target/resume.h, $(srcdir)/../target/wait.h
+	and $(srcdir)/../target/waitstatus.h.
+	(target-common.o): Remove.
+	(waitstatus.o): New target object file.
+	* target.h: Do not include target-common.h and
+	include target/resume.h, target/wait.h and
+	target/waitstatus.h.
+
+2013-08-13  Luis Machado  <lgustavo@codesourcery.com>
+
+	* linux-arm-low.c: Rename all occurrences of PTRACE_ARG3_TYPE
+	to PTRACE_TYPE_ARG3.
+	* linux-low.c: Rename all occurrences of PTRACE_ARG3_TYPE
+	to PTRACE_TYPE_ARG3 and PTRACE_ARG4_TYPE to
+	PTRACE_TYPE_ARG4.
+	* linux-low.h (PTRACE_ARG3_TYPE): Rename to PTRACE_TYPE_ARG3.
+	(PTRACE_ARG4_TYPE): Rename to PTRACE_TYPE_ARG4.
+
 2013-07-27  Jie Zhang  <jie@codesourcery.com>
 	    Daniel Jacobowitz  <dan@codesourcery.com>
 	    Yao Qi  <yao@codesourcery.com>
@@ -68,7 +124,7 @@
 	(winapi_DebugSetProcessKillOnExit): Ditto.
 	(winapi_DebugBreakProcess): Ditto.
 	(winapi_GenerateConsoleCtrlEvent): Ditto.
-	
+
 2013-07-02  Mircea Gherzan  <mircea.gherzan@intel.com>
 
 	* notif.h (notif_event): Add a dummy member to avoid compiler
@@ -475,14 +531,14 @@
 	(nios2_regs_info): New function.
 	(the_low_target): Adjust.
 	(initialize_low_arch): New function.
-        * linux-aarch64-low.c (tdesc_aarch64): Declare.
-        (aarch64_arch_setup): Set the current process'es tdesc.
-        (target_regsets): Rename to ...
-        (aarch64_regsets): ... this.
-        (aarch64_regsets_info, aarch64_usrregs_info, regs_info): New globals.
-        (aarch64_regs_info): New function.
-        (the_low_target): Adjust.
-        (initialize_low_arch): New function.
+	* linux-aarch64-low.c (tdesc_aarch64): Declare.
+	(aarch64_arch_setup): Set the current process'es tdesc.
+	(target_regsets): Rename to ...
+	(aarch64_regsets): ... this.
+	(aarch64_regsets_info, aarch64_usrregs_info, regs_info): New globals.
+	(aarch64_regs_info): New function.
+	(the_low_target): Adjust.
+	(initialize_low_arch): New function.
 	* linux-tile-low.c (tdesc_tilegx, tdesc_tilegx32): Declare
 	globals.
 	(target_regsets): Rename to ...
@@ -1200,7 +1256,7 @@
 
 2012-07-19  Michael Eager  <eager@eagercon.com>
 
-	* i386-low.c (Z_packet_to_hw_type): Add Z_PACKET_HW_BP, translate 
+	* i386-low.c (Z_packet_to_hw_type): Add Z_PACKET_HW_BP, translate
 	to hw_execute.
 	* linux-x86-low.c (x86_insert_point, x86_remove_point):
 	Call i386_low_insert_watchpoint, i386_low_remove_watchpoint to add/del

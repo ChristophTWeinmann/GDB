@@ -185,14 +185,6 @@ show_sevenbit_strings (struct ui_file *file, int from_tty,
 		    value);
 }
 
-/* String to be printed before error messages, if any.  */
-
-char *error_pre_print;
-
-/* String to be printed before quit messages, if any.  */
-
-char *quit_pre_print;
-
 /* String to be printed before warning messages, if any.  */
 
 char *warning_pre_print = "\nwarning: ";
@@ -831,7 +823,7 @@ void
 internal_verror (const char *file, int line, const char *fmt, va_list ap)
 {
   internal_vproblem (&internal_error_problem, file, line, fmt, ap);
-  deprecated_throw_reason (RETURN_ERROR);
+  fatal (_("Command aborted."));
 }
 
 void
@@ -1668,12 +1660,16 @@ init_page_info (void)
       lines_per_page = rows;
       chars_per_line = cols;
 
-      /* Readline should have fetched the termcap entry for us.  */
-      if (tgetnum ("li") < 0 || getenv ("EMACS"))
+      /* Readline should have fetched the termcap entry for us.
+         Only try to use tgetnum function if rl_get_screen_size
+         did not return a useful value. */
+      if (((rows <= 0) && (tgetnum ("li") < 0))
+	/* Also disable paging if inside EMACS.  */
+	  || getenv ("EMACS"))
 	{
-	  /* The number of lines per page is not mentioned in the
-	     terminal description.  This probably means that paging is
-	     not useful (e.g. emacs shell window), so disable paging.  */
+	  /* The number of lines per page is not mentioned in the terminal
+	     description or EMACS evironment variable is set.  This probably
+	     means that paging is not useful, so disable paging.  */
 	  lines_per_page = UINT_MAX;
 	}
 

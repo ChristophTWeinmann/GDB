@@ -1,6 +1,6 @@
-/* Dump-to-file commands, for GDB, the GNU debugger.
+/* Wrapper for waitpid for GNU/Linux (LWP layer).
 
-   Copyright (C) 2001-2013 Free Software Foundation, Inc.
+   Copyright (C) 2000-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,18 +17,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef CLI_DUMP_H
-#define CLI_DUMP_H
+#ifndef LINUX_WAITPID_H
+#define LINUX_WAITPID_H
 
-extern void add_dump_command (char *name,
-			      void (*func) (char *args, char *mode),
-			      char *descr);
+/* Wrapper function for waitpid which handles EINTR, and emulates
+   __WALL for systems where that is not available.  */
+extern int my_waitpid (int pid, int *status, int flags);
 
-/* Utilities for doing the dump.  */
-extern char *scan_filename_with_cleanup (char **cmd, const char *defname);
-
-extern char *scan_expression_with_cleanup (char **cmd, const char *defname);
-
-extern FILE *fopen_with_cleanup (const char *filename, const char *mode);
-
-#endif
+#endif /* LINUX_WAITPID_H */

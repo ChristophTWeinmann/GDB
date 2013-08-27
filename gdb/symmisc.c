@@ -59,13 +59,6 @@ FILE *std_err;
 
 /* Prototypes for local functions */
 
-static void dump_symtab (struct objfile *, struct symtab *,
-			 struct ui_file *);
-
-static void dump_msymbols (struct objfile *, struct ui_file *);
-
-static void dump_objfile (struct objfile *);
-
 static int block_depth (struct block *);
 
 void _initialize_symmisc (void);
@@ -694,18 +687,23 @@ maintenance_print_msymbols (char *args, int from_tty)
 }
 
 static void
-maintenance_print_objfiles (char *ignore, int from_tty)
+maintenance_print_objfiles (char *regexp, int from_tty)
 {
   struct program_space *pspace;
   struct objfile *objfile;
 
   dont_repeat ();
 
+  if (regexp)
+    re_comp (regexp);
+
   ALL_PSPACES (pspace)
     ALL_PSPACE_OBJFILES (pspace, objfile)
       {
 	QUIT;
-	dump_objfile (objfile);
+	if (! regexp
+	    || re_exec (objfile->name))
+	  dump_objfile (objfile);
       }
 }
 
@@ -716,6 +714,8 @@ maintenance_info_symtabs (char *regexp, int from_tty)
 {
   struct program_space *pspace;
   struct objfile *objfile;
+
+  dont_repeat ();
 
   if (regexp)
     re_comp (regexp);
@@ -940,14 +940,15 @@ If a SOURCE file is specified, dump only that file's minimal symbols."),
 	   &maintenanceprintlist);
 
   add_cmd ("objfiles", class_maintenance, maintenance_print_objfiles,
-	   _("Print dump of current object file definitions."),
+	   _("Print dump of current object file definitions.\n\
+With an argument REGEXP, list the object files with matching names."),
 	   &maintenanceprintlist);
 
   add_cmd ("symtabs", class_maintenance, maintenance_info_symtabs, _("\
 List the full symbol tables for all object files.\n\
 This does not include information about individual symbols, blocks, or\n\
 linetables --- just the symbol table structures themselves.\n\
-With an argument REGEXP, list the symbol tables whose names that match that."),
+With an argument REGEXP, list the symbol tables with matching names."),
 	   &maintenanceinfolist);
 
   add_cmd ("check-symtabs", class_maintenance, maintenance_check_symtabs,

@@ -884,14 +884,14 @@ init_entry_point_info (struct objfile *objfile)
       /* Make certain that the address points at real code, and not a
 	 function descriptor.  */
       entry_point
-	= gdbarch_convert_from_func_ptr_addr (objfile->gdbarch,
+	= gdbarch_convert_from_func_ptr_addr (get_objfile_arch (objfile),
 					      entry_point,
 					      &current_target);
 
       /* Remove any ISA markers, so that this matches entries in the
 	 symbol table.  */
       objfile->ei.entry_point
-	= gdbarch_addr_bits_remove (objfile->gdbarch, entry_point);
+	= gdbarch_addr_bits_remove (get_objfile_arch (objfile), entry_point);
     }
 }
 
@@ -1612,11 +1612,11 @@ set_initial_language (void)
     lang = language_of_main;
   else
     {
-      const char *filename;
+      char *name = main_name ();
+      struct symbol *sym = lookup_symbol (name, NULL, VAR_DOMAIN, NULL);
 
-      filename = find_main_filename ();
-      if (filename != NULL)
-	lang = deduce_language_from_filename (filename);
+      if (sym != NULL)
+	lang = SYMBOL_LANGUAGE (sym);
     }
 
   if (lang == language_unknown)
@@ -2504,6 +2504,12 @@ reread_symbols (void)
 	     empty.  We could use obstack_specify_allocation but
 	     gdb_obstack.h specifies the alloc/dealloc functions.  */
 	  obstack_init (&objfile->objfile_obstack);
+
+	  /* Reset the sym_fns pointer.  The ELF reader can change it
+	     based on whether .gdb_index is present, and we need it to
+	     start over.  PR symtab/15885  */
+	  objfile->sf = find_sym_fns (objfile->obfd);
+
 	  build_objfile_section_table (objfile);
 	  terminate_minimal_symbol_table (objfile);
 
@@ -3399,7 +3405,8 @@ read_target_long_array (CORE_ADDR memaddr, unsigned int *myaddr,
 static int
 simple_read_overlay_table (void)
 {
-  struct minimal_symbol *novlys_msym, *ovly_table_msym;
+  struct minimal_symbol *novlys_msym;
+  struct bound_minimal_symbol ovly_table_msym;
   struct gdbarch *gdbarch;
   int word_size;
   enum bfd_endian byte_order;
@@ -3414,8 +3421,8 @@ simple_read_overlay_table (void)
       return 0;
     }
 
-  ovly_table_msym = lookup_minimal_symbol ("_ovly_table", NULL, NULL);
-  if (! ovly_table_msym)
+  ovly_table_msym = lookup_bound_minimal_symbol ("_ovly_table");
+  if (! ovly_table_msym.minsym)
     {
       error (_("Error reading inferior's overlay table: couldn't find "
              "`_ovly_table' array\n"
@@ -3423,7 +3430,7 @@ simple_read_overlay_table (void)
       return 0;
     }
 
-  gdbarch = get_objfile_arch (msymbol_objfile (ovly_table_msym));
+  gdbarch = get_objfile_arch (ovly_table_msym.objfile);
   word_size = gdbarch_long_bit (gdbarch) / TARGET_CHAR_BIT;
   byte_order = gdbarch_byte_order (gdbarch);
 
@@ -3431,7 +3438,7 @@ simple_read_overlay_table (void)
 				      4, byte_order);
   cache_ovly_table
     = (void *) xmalloc (cache_novlys * sizeof (*cache_ovly_table));
-  cache_ovly_table_base = SYMBOL_VALUE_ADDRESS (ovly_table_msym);
+  cache_ovly_table_base = SYMBOL_VALUE_ADDRESS (ovly_table_msym.minsym);
   read_target_long_array (cache_ovly_table_base,
                           (unsigned int *) cache_ovly_table,
                           cache_novlys * 4, word_size, byte_order);

@@ -1,3 +1,150 @@
+2013-08-23  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* micromips-opc.c (micromips_opcodes): Use RD_4 for "alnv.ps",
+	replacing NODS.
+
+2013-08-23  Yuri Chornoivan  <yurchor@ukr.net>
+
+	PR binutils/15834
+	* aarch64-asm.c: Fix typos.
+	* aarch64-dis.c: Likewise.
+	* msp430-dis.c: Likewise.
+
+2013-08-19  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* micromips-opc.c (micromips_opcodes): Replace "dext" and "dins"
+	macro entries with "dextm", "dextu", "dinsm" and "dinsu" aliases.
+	Use +H rather than +C for the real "dext".
+	* mips-opc.c (mips_builtin_opcodes): Likewise.
+
+2013-08-19  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-formats.h (OPTIONAL_REG, OPTIONAL_MAPPED_REG): New macros.
+	* micromips-opc.c (decode_micromips_operand): Use OPTIONAL_REG
+	and OPTIONAL_MAPPED_REG.
+	* mips-opc.c (decode_mips_operand): Likewise.
+	* mips16-opc.c (decode_mips16_operand): Likewise.
+	* mips-dis.c (print_insn_arg): Handle OP_OPTIONAL_REG.
+
+2013-08-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-dis.c (PREFIX_EVEX_0F3A3E): Removed.
+	(PREFIX_EVEX_0F3A3F): Likewise.
+	* i386-dis-evex.h (evex_table): Updated.
+
+2013-08-06  Jürgen Urban  <JuergenUrban@gmx.de>
+
+	* mips-opc.c (mips_builtin_opcodes): Add a suffixless version of
+	VCLIPW.
+
+2013-08-05  Eric Botcazou  <ebotcazou@adacore.com>
+            Konrad Eisele  <konrad@gaisler.com>
+
+	* sparc-dis.c (compute_arch_mask): Set SPARC_OPCODE_ARCH_LEON bit for
+	bfd_mach_sparc.
+	* sparc-opc.c (MASK_LEON): Define.
+	(v6, v6notlet, v7, v8, v6notv9): Add MASK_LEON.
+	(letandleon): New macro.
+	(v9andleon): Likewise.
+	(sparc_opc): Add leon.
+	(umac): Enable for letandleon.
+	(smac): Likewise.
+	(casa): Enable for v9andleon.
+	(cas): Likewise.
+	(casl): Likewise.
+
+2013-08-04  Jürgen Urban  <JuergenUrban@gmx.de>
+	    Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-dis.c (print_reg): Handle OP_REG_VI, OP_REG_VF, OP_REG_R5900_I,
+	OP_REG_R5900_Q, OP_REG_R5900_R and OP_REG_R5900_ACC.
+	(print_vu0_channel): New function.
+	(print_insn_arg): Handle OP_VU0_SUFFIX and OP_VU0_MATCH_SUFFIX.
+	(print_insn_args): Handle '#'.
+	(print_insn_mips): Handle INSN2_VU0_CHANNEL_SUFFIX.
+	* mips-opc.c (mips_vu0_channel_mask): New constant.
+	(decode_mips_operand): Handle new VU0 operand types.
+	(VU0, VU0CH): New macros.
+	(mips_builtin_opcodes): Add VU0 opcodes.  Use "+7" rather than "E"
+	for LQC2 and SQC2.  Use "+9" rather than "G" for EE CFC2 and CTC2.
+	Use "+6" rather than "G" for QMFC2 and QMTC2.
+
+2013-08-03  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-formats.h (PCREL): Reorder parameters and update the definition
+	to match new mips_pcrel_operand layout.
+	(JUMP, JALX, BRANCH): Update accordingly.
+	* mips16-opc.c (decode_mips16_operand): Likewise.
+
+2013-08-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* micromips-opc.c (WR_s): Delete.
+
+2013-08-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (WR_1, WR_2, RD_1, RD_2, RD_3, RD_4, MOD_1, MOD_2, UDI):
+	New macros.
+	(WR_d, WR_t, WR_D, WR_T, WR_S, RD_s, RD_b, RD_t, RD_S, RD_T, RD_R)
+	(WR_z, WR_Z, RD_z, RD_Z, RD_d): Delete.
+	(mips_builtin_opcodes): Use the new position-based read-write flags
+	instead of field-based ones.  Use UDI for "udi..." instructions.
+	* mips16-opc.c (WR_1, WR_2, RD_1, RD_2, RD_3, RD_4, MOD_1, MOD_2):
+	New macros.
+	(WR_x, WR_y, WR_z, WR_Y, RD_x, RD_y, RD_Z, RD_X): Delete.
+	(RD_T, WR_T, WR_31): Redefine using generic INSN_* flags.
+	(WR_SP, RD_16): New macros.
+	(RD_SP): Redefine as an INSN2_* flag.
+	(MOD_SP): Redefine in terms of RD_SP and WR_SP.
+	(mips16_opcodes): Use the new position-based read-write flags
+	instead of field-based ones.  Use RD_16 for "nop".  Move RD_SP to
+	pinfo2 field.
+	* micromips-opc.c (WR_1, WR_2, RD_1, RD_2, RD_3, RD_4, MOD_1, MOD_2):
+	New macros.
+	(WR_mb, RD_mc, RD_md, WR_md, RD_me, RD_mf, WR_mf, RD_mg, WR_mh, RD_mj)
+	(WR_mj, RD_ml, RD_mmn, RD_mp, WR_mp, RD_mq, RD_gp, WR_d, WR_t, WR_D)
+	(WR_T, WR_S, RD_s, RD_b, RD_t, RD_T, RD_S, RD_R, RD_D): Delete.
+	(RD_sp, WR_sp): Redefine to INSN2_READ_SP and INSN2_WRITE_SP.
+	(micromips_opcodes): Use the new position-based read-write flags
+	instead of field-based ones.
+	* mips-dis.c (print_insn_arg): Use mips_decode_reg_operand.
+	(print_insn_mips, print_insn_micromips): Use INSN_WRITE_1 instead
+	of field-based flags.
+
+2013-08-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips16-opc.c (UBR, CBR, RD_31, RD_PC): Redefine as INSN2_* flags.
+	(WR_SP): Replace with...
+	(MOD_SP): ...this.
+	(mips16_opcodes): Update accordingly.
+	* mips-dis.c (print_insn_mips16): Likewise.
+
+2013-08-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips16-opc.c (mips16_opcodes): Reformat.
+
+2013-08-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Remove WR_* and RD_* flags
+	for operands that are hard-coded to $0.
+	* micromips-opc.c (micromips_opcodes): Likewise.
+
+2013-08-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Use WR_31 rather than WR_d
+	for the single-operand forms of JALR and JALR.HB.
+	* micromips-opc.c (micromips_opcodes): Likewise JALR, JALRS, JALR.HB
+	and JALRS.HB.
+
+2013-08-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Add FP_D to VR5400 vector
+	instructions.  Fix them to use WR_MACC instead of WR_CC and
+	add missing RD_MACCs.
+
+2013-08-01  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* mips-dis.c (print_mips16_insn_arg): Include ISA bit in base address.
+
 2013-07-29  Peter Bergner <bergner@vnet.ibm.com>
 
 	* ppc-dis.c (powerpc_init_dialect): Use ppc_parse_cpu() to set dialect.

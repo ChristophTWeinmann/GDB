@@ -436,6 +436,10 @@ extern int value_bytes_available (const struct value *value,
    whole object is unavailable.  */
 extern int value_entirely_available (struct value *value);
 
+/* Like value_entirely_available, but return false if any byte in the
+   whole object is available.  */
+extern int value_entirely_unavailable (struct value *value);
+
 /* Mark VALUE's content bytes starting at OFFSET and extending for
    LENGTH bytes as unavailable.  */
 
@@ -728,7 +732,8 @@ extern struct value *evaluate_subexpression_type (struct expression *exp,
 
 extern void fetch_subexp_value (struct expression *exp, int *pc,
 				struct value **valp, struct value **resultp,
-				struct value **val_chain);
+				struct value **val_chain,
+				int preserve_errors);
 
 extern char *extract_field_op (struct expression *exp, int *subexp);
 
@@ -812,10 +817,9 @@ struct internalvar_funcs
   void (*destroy) (void *data);
 };
 
-extern struct internalvar *
-create_internalvar_type_lazy (const char *name,
-			      const struct internalvar_funcs *funcs,
-			      void *data);
+extern struct internalvar *create_internalvar_type_lazy (const char *name,
+				const struct internalvar_funcs *funcs,
+				void *data);
 
 /* Compile an internal variable to an agent expression.  VAR is the
    variable to compile; EXPR and VALUE are the agent expression we are

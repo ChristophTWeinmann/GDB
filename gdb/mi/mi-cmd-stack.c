@@ -39,9 +39,10 @@
 
 enum what_to_list { locals, arguments, all };
 
-static void list_args_or_locals (enum what_to_list what, 
+static void list_args_or_locals (enum what_to_list what,
 				 enum print_values values,
-				 struct frame_info *fi);
+				 struct frame_info *fi,
+				 int skip_unavailable);
 
 /* True if we want to allow Python-based frame filters.  */
 static int frame_filters = 0;
@@ -52,17 +53,6 @@ mi_cmd_enable_frame_filters (char *command, char **argv, int argc)
   if (argc != 0)
     error (_("-enable-frame-filters: no arguments allowed"));
   frame_filters = 1;
-}
-
-/* Parse the --no-frame-filters option in commands where we cannot use
-   mi_getopt. */
-static int
-parse_no_frames_option (const char *arg)
-{
-  if (arg && (strcmp (arg, "--no-frame-filters") == 0))
-    return 1;
-
-  return 0;
 }
 
 /* Print a list of the stack frames.  Args can be none, in which case
@@ -212,16 +202,53 @@ mi_cmd_stack_list_locals (char *command, char **argv, int argc)
   int raw_arg = 0;
   enum py_bt_status result = PY_BT_ERROR;
   int print_value;
+  int oind = 0;
+  int skip_unavailable = 0;
+  int i;
 
-  if (argc > 0)
-    raw_arg = parse_no_frames_option (argv[0]);
+  if (argc > 1)
+    {
+      int i;
+      enum opt
+      {
+	NO_FRAME_FILTERS,
+	SKIP_UNAVAILABLE,
+      };
+      static const struct mi_opt opts[] =
+	{
+	  {"-no-frame-filters", NO_FRAME_FILTERS, 0},
+	  {"-skip-unavailable", SKIP_UNAVAILABLE, 0},
+	  { 0, 0, 0 }
+	};
 
-  if (argc < 1 || argc > 2 || (argc == 2 && ! raw_arg)
-      || (argc == 1 && raw_arg))
-    error (_("-stack-list-locals: Usage: [--no-frame-filters] PRINT_VALUES"));
+      while (1)
+	{
+	  char *oarg;
+	  /* Don't parse 'print-values' as an option.  */
+	  int opt = mi_getopt ("-stack-list-locals", argc - 1, argv,
+			       opts, &oind, &oarg);
+
+	  if (opt < 0)
+	    break;
+	  switch ((enum opt) opt)
+	    {
+	    case NO_FRAME_FILTERS:
+	      raw_arg = oind;
+	    case SKIP_UNAVAILABLE:
+	      skip_unavailable = 1;
+	      break;
+	    }
+	}
+    }
+
+  /* After the last option is parsed, there should be only
+     'print-values'.  */
+  if (argc - oind != 1)
+    error (_("-stack-list-locals: Usage: [--no-frame-filters] "
+	     "[--skip-unavailable] PRINT_VALUES"));
 
   frame = get_selected_frame (NULL);
-  print_value = mi_parse_print_values (argv[raw_arg]);
+  print_value = mi_parse_print_values (argv[oind]);
 
    if (! raw_arg && frame_filters)
      {
@@ -235,7 +262,8 @@ mi_cmd_stack_list_locals (char *command, char **argv, int argc)
       if "--no-frame-filters" has been specified from the command.  */
    if (! frame_filters || raw_arg  || result == PY_BT_NO_FILTERS)
      {
-       list_args_or_locals (locals, print_value, frame);
+       list_args_or_locals (locals, print_value, frame,
+			    skip_unavailable);
      }
 }
 
@@ -254,19 +282,49 @@ mi_cmd_stack_list_args (char *command, char **argv, int argc)
   enum print_values print_values;
   struct ui_out *uiout = current_uiout;
   int raw_arg = 0;
+  int oind = 0;
+  int skip_unavailable = 0;
   enum py_bt_status result = PY_BT_ERROR;
-
-  if (argc > 0)
-    raw_arg = parse_no_frames_option (argv[0]);
-
-  if (argc < 1 || (argc > 3 && ! raw_arg) || (argc == 2 && ! raw_arg))
-    error (_("-stack-list-arguments: Usage: " \
-	     "[--no-frame-filters] PRINT_VALUES [FRAME_LOW FRAME_HIGH]"));
-
-  if (argc >= 3)
+  enum opt
+  {
+    NO_FRAME_FILTERS,
+    SKIP_UNAVAILABLE,
+  };
+  static const struct mi_opt opts[] =
     {
-      frame_low = atoi (argv[1 + raw_arg]);
-      frame_high = atoi (argv[2 + raw_arg]);
+      {"-no-frame-filters", NO_FRAME_FILTERS, 0},
+      {"-skip-unavailable", SKIP_UNAVAILABLE, 0},
+      { 0, 0, 0 }
+    };
+
+  while (1)
+    {
+      char *oarg;
+      int opt = mi_getopt_allow_unknown ("-stack-list-args", argc, argv,
+					 opts, &oind, &oarg);
+
+      if (opt < 0)
+	break;
+      switch ((enum opt) opt)
+	{
+	case NO_FRAME_FILTERS:
+	  raw_arg = oind;
+	  break;
+	case SKIP_UNAVAILABLE:
+	  skip_unavailable = 1;
+	  break;
+	}
+    }
+
+  if (argc - oind != 1 && argc - oind != 3)
+    error (_("-stack-list-arguments: Usage: "	\
+	     "[--no-frame-filters] [--skip-unavailable] "
+	     "PRINT_VALUES [FRAME_LOW FRAME_HIGH]"));
+
+  if (argc - oind == 3)
+    {
+      frame_low = atoi (argv[1 + oind]);
+      frame_high = atoi (argv[2 + oind]);
     }
   else
     {
@@ -276,7 +334,7 @@ mi_cmd_stack_list_args (char *command, char **argv, int argc)
       frame_high = -1;
     }
 
-  print_values = mi_parse_print_values (argv[raw_arg]);
+  print_values = mi_parse_print_values (argv[oind]);
 
   /* Let's position fi on the frame at which to start the
      display. Could be the innermost frame if the whole stack needs
@@ -322,7 +380,7 @@ mi_cmd_stack_list_args (char *command, char **argv, int argc)
 	  QUIT;
 	  cleanup_frame = make_cleanup_ui_out_tuple_begin_end (uiout, "frame");
 	  ui_out_field_int (uiout, "level", i);
-	  list_args_or_locals (arguments, print_values, fi);
+	  list_args_or_locals (arguments, print_values, fi, skip_unavailable);
 	  do_cleanups (cleanup_frame);
 	}
     }
@@ -341,17 +399,52 @@ mi_cmd_stack_list_variables (char *command, char **argv, int argc)
   int raw_arg = 0;
   enum py_bt_status result = PY_BT_ERROR;
   int print_value;
+  int oind = 0;
+  int skip_unavailable = 0;
 
-  if (argc > 0)
-    raw_arg = parse_no_frames_option (argv[0]);
+  if (argc > 1)
+    {
+      int i;
+      enum opt
+      {
+	NO_FRAME_FILTERS,
+	SKIP_UNAVAILABLE,
+      };
+      static const struct mi_opt opts[] =
+	{
+	  {"-no-frame-filters", NO_FRAME_FILTERS, 0},
+	  {"-skip-unavailable", SKIP_UNAVAILABLE, 0},
+	  { 0, 0, 0 }
+	};
 
-  if (argc < 1 || argc > 2 || (argc == 2 && ! raw_arg)
-      || (argc == 1 && raw_arg))
-    error (_("-stack-list-variables: Usage: " \
-	     "[--no-frame-filters] PRINT_VALUES"));
+      while (1)
+	{
+	  char *oarg;
+	  /* Don't parse 'print-values' as an option.  */
+	  int opt = mi_getopt ("-stack-list-variables", argc - 1,
+			       argv, opts, &oind, &oarg);
+	  if (opt < 0)
+	    break;
+	  switch ((enum opt) opt)
+	    {
+	    case NO_FRAME_FILTERS:
+	      raw_arg = oind;
+	      break;
+	    case SKIP_UNAVAILABLE:
+	      skip_unavailable = 1;
+	      break;
+	    }
+	}
+    }
+
+  /* After the last option is parsed, there should be only
+     'print-values'.  */
+  if (argc - oind != 1)
+    error (_("-stack-list-variables: Usage: [--no-frame-filters] " \
+	     "[--skip-unavailable] PRINT_VALUES"));
 
    frame = get_selected_frame (NULL);
-   print_value = mi_parse_print_values (argv[raw_arg]);
+   print_value = mi_parse_print_values (argv[oind]);
 
    if (! raw_arg && frame_filters)
      {
@@ -365,7 +458,8 @@ mi_cmd_stack_list_variables (char *command, char **argv, int argc)
       if "--no-frame-filters" has been specified from the command.  */
    if (! frame_filters || raw_arg  || result == PY_BT_NO_FILTERS)
      {
-       list_args_or_locals (all, print_value, frame);
+       list_args_or_locals (all, print_value, frame,
+			    skip_unavailable);
      }
 }
 
@@ -373,18 +467,16 @@ mi_cmd_stack_list_variables (char *command, char **argv, int argc)
    WHAT and VALUES see list_args_or_locals.
 
    Errors are printed as if they would be the parameter value.  Use
-   zeroed ARG iff it should not be printed according to VALUES.  */
+   zeroed ARG iff it should not be printed according to VALUES.  If
+   SKIP_UNAVAILABLE is true, only print ARG if it is available.  */
 
 static void
 list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
-		   enum print_values values)
+		   enum print_values values, int skip_unavailable)
 {
   struct cleanup *old_chain;
   struct ui_out *uiout = current_uiout;
   struct ui_file *stb;
-
-  stb = mem_fileopen ();
-  old_chain = make_cleanup_ui_file_delete (stb);
 
   gdb_assert (!arg->val || !arg->error);
   gdb_assert ((values == PRINT_NO_VALUES && arg->val == NULL
@@ -395,6 +487,20 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
   gdb_assert (arg->entry_kind == print_entry_values_no
 	      || (arg->entry_kind == print_entry_values_only
 	          && (arg->val || arg->error)));
+
+  if (skip_unavailable && arg->val != NULL
+      && (value_entirely_unavailable (arg->val)
+	  /* A scalar object that does not have all bits available is
+	     also considered unavailable, because all bits contribute
+	     to its representation.  */
+	  || (val_print_scalar_type_p (value_type (arg->val))
+	      && !value_bytes_available (arg->val,
+					 value_embedded_offset (arg->val),
+					 TYPE_LENGTH (value_type (arg->val))))))
+    return;
+
+  stb = mem_fileopen ();
+  old_chain = make_cleanup_ui_file_delete (stb);
 
   if (values != PRINT_NO_VALUES || what == all)
     make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
@@ -443,14 +549,15 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
   do_cleanups (old_chain);
 }
 
-/* Print a list of the locals or the arguments for the currently
-   selected frame.  If the argument passed is 0, printonly the names
-   of the variables, if an argument of 1 is passed, print the values
-   as well.  */
+/* Print a list of the objects for the frame FI in a certain form,
+   which is determined by VALUES.  The objects can be locals,
+   arguments or both, which is determined by WHAT.  If SKIP_UNAVAILABLE
+   is true, only print the arguments or local variables whose values
+   are available.  */
 
 static void
 list_args_or_locals (enum what_to_list what, enum print_values values,
-		     struct frame_info *fi)
+		     struct frame_info *fi, int skip_unavailable)
 {
   struct block *block;
   struct symbol *sym;
@@ -544,15 +651,18 @@ list_args_or_locals (enum what_to_list what, enum print_values values,
 		      && TYPE_CODE (type) != TYPE_CODE_UNION)
 		    {
 		case PRINT_ALL_VALUES:
-		      read_frame_arg (sym2, fi, &arg, &entryarg);
+		  if (SYMBOL_IS_ARGUMENT (sym))
+		    read_frame_arg (sym2, fi, &arg, &entryarg);
+		  else
+		    read_frame_local (sym2, fi, &arg);
 		    }
 		  break;
 		}
 
 	      if (arg.entry_kind != print_entry_values_only)
-		list_arg_or_local (&arg, what, values);
+		list_arg_or_local (&arg, what, values, skip_unavailable);
 	      if (entryarg.entry_kind != print_entry_values_no)
-		list_arg_or_local (&entryarg, what, values);
+		list_arg_or_local (&entryarg, what, values, skip_unavailable);
 	      xfree (arg.error);
 	      xfree (entryarg.error);
 	    }

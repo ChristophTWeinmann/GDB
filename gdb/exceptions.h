@@ -38,10 +38,13 @@ enum return_reason
   };
 
 #define RETURN_MASK(reason)	(1 << (int)(-reason))
-#define RETURN_MASK_QUIT	RETURN_MASK (RETURN_QUIT)
-#define RETURN_MASK_ERROR	RETURN_MASK (RETURN_ERROR)
-#define RETURN_MASK_ALL		(RETURN_MASK_QUIT | RETURN_MASK_ERROR)
-typedef int return_mask;
+
+typedef enum
+{
+  RETURN_MASK_QUIT = RETURN_MASK (RETURN_QUIT),
+  RETURN_MASK_ERROR = RETURN_MASK (RETURN_ERROR),
+  RETURN_MASK_ALL = (RETURN_MASK_QUIT | RETURN_MASK_ERROR)
+} return_mask;
 
 /* Describe all exceptions.  */
 
@@ -185,11 +188,6 @@ extern void throw_vfatal (const char *fmt, va_list ap)
      ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (1, 0);
 extern void throw_error (enum errors error, const char *fmt, ...)
      ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (2, 3);
-
-/* Instead of deprecated_throw_reason, code should use
-   throw_exception.  */
-extern void deprecated_throw_reason (enum return_reason reason)
-     ATTRIBUTE_NORETURN;
 
 /* Call FUNC(UIOUT, FUNC_ARGS) but wrapped within an exception
    handler.  If an exception (enum return_reason) is thrown using

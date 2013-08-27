@@ -936,6 +936,10 @@ struct symtab
 #define BLOCKVECTOR(symtab)	(symtab)->blockvector
 #define LINETABLE(symtab)	(symtab)->linetable
 #define SYMTAB_PSPACE(symtab)	(symtab)->objfile->pspace
+
+typedef struct symtab *symtab_ptr;
+DEF_VEC_P (symtab_ptr);
+
 
 
 /* The virtual function table is now an array of structures which have the
@@ -1248,8 +1252,6 @@ extern VEC (char_ptr) *make_source_files_completion_list (const char *,
 
 int matching_obj_sections (struct obj_section *, struct obj_section *);
 
-extern const char *find_main_filename (void);
-
 extern struct symtab *find_line_symtab (struct symtab *, int, int *, int *);
 
 extern struct symtab_and_line find_function_start_sal (struct symbol *sym,
@@ -1288,14 +1290,14 @@ struct symbol_search
 
   /* Information describing what was found.
 
-     If symtab abd symbol are NOT NULL, then information was found
+     If symtab and symbol are NOT NULL, then information was found
      for this match.  */
   struct symtab *symtab;
   struct symbol *symbol;
 
   /* If msymbol is non-null, then a match was made on something for
      which only minimal_symbols exist.  */
-  struct minimal_symbol *msymbol;
+  struct bound_minimal_symbol msymbol;
 
   /* A link to the next match, or NULL for the end.  */
   struct symbol_search *next;
@@ -1305,7 +1307,7 @@ extern void search_symbols (char *, enum search_domain, int, char **,
 			    struct symbol_search **);
 extern void free_search_symbols (struct symbol_search *);
 extern struct cleanup *make_cleanup_free_search_symbols (struct symbol_search
-							 *);
+							 **);
 
 /* The name of the ``main'' function.
    FIXME: cagney/2001-03-20: Can't make main_name() const since some

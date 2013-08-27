@@ -354,6 +354,26 @@ value_entirely_available (struct value *value)
   return 0;
 }
 
+int
+value_entirely_unavailable (struct value *value)
+{
+  /* We can only tell whether the whole value is available when we try
+     to read it.  */
+  if (value->lazy)
+    value_fetch_lazy (value);
+
+  if (VEC_length (range_s, value->unavailable) == 1)
+    {
+      struct range *t = VEC_index (range_s, value->unavailable, 0);
+
+      if (t->offset == 0
+	  && t->length == TYPE_LENGTH (value_enclosing_type (value)))
+	return 1;
+    }
+
+  return 0;
+}
+
 void
 mark_value_bytes_unavailable (struct value *value, int offset, int length)
 {
@@ -2811,18 +2831,18 @@ value_fn_field (struct value **arg1p, struct fn_field *f,
   struct type *ftype = TYPE_FN_FIELD_TYPE (f, j);
   const char *physname = TYPE_FN_FIELD_PHYSNAME (f, j);
   struct symbol *sym;
-  struct minimal_symbol *msym;
+  struct bound_minimal_symbol msym;
 
   sym = lookup_symbol (physname, 0, VAR_DOMAIN, 0);
   if (sym != NULL)
     {
-      msym = NULL;
+      memset (&msym, 0, sizeof (msym));
     }
   else
     {
       gdb_assert (sym == NULL);
-      msym = lookup_minimal_symbol (physname, NULL, NULL);
-      if (msym == NULL)
+      msym = lookup_bound_minimal_symbol (physname);
+      if (msym.minsym == NULL)
 	return NULL;
     }
 
@@ -2835,12 +2855,12 @@ value_fn_field (struct value **arg1p, struct fn_field *f,
     {
       /* The minimal symbol might point to a function descriptor;
 	 resolve it to the actual code address instead.  */
-      struct objfile *objfile = msymbol_objfile (msym);
+      struct objfile *objfile = msym.objfile;
       struct gdbarch *gdbarch = get_objfile_arch (objfile);
 
       set_value_address (v,
 	gdbarch_convert_from_func_ptr_addr
-	   (gdbarch, SYMBOL_VALUE_ADDRESS (msym), &current_target));
+	   (gdbarch, SYMBOL_VALUE_ADDRESS (msym.minsym), &current_target));
     }
 
   if (arg1p)

@@ -917,6 +917,30 @@ print_reg (struct disassemble_info *info, const struct mips_opcode *opcode,
     case OP_REG_HW:
       info->fprintf_func (info->stream, "%s", mips_hwr_names[regno]);
       break;
+
+    case OP_REG_VF:
+      info->fprintf_func (info->stream, "$vf%d", regno);
+      break;
+
+    case OP_REG_VI:
+      info->fprintf_func (info->stream, "$vi%d", regno);
+      break;
+
+    case OP_REG_R5900_I:
+      info->fprintf_func (info->stream, "$I");
+      break;
+
+    case OP_REG_R5900_Q:
+      info->fprintf_func (info->stream, "$Q");
+      break;
+
+    case OP_REG_R5900_R:
+      info->fprintf_func (info->stream, "$R");
+      break;
+
+    case OP_REG_R5900_ACC:
+      info->fprintf_func (info->stream, "$ACC");
+      break;
     }
 }
 
@@ -939,6 +963,25 @@ static inline void
 init_print_arg_state (struct mips_print_arg_state *state)
 {
   memset (state, 0, sizeof (*state));
+}
+
+/* Print OP_VU0_SUFFIX or OP_VU0_MATCH_SUFFIX operand OPERAND,
+   whose value is given by UVAL.  */
+
+static void
+print_vu0_channel (struct disassemble_info *info,
+		   const struct mips_operand *operand, unsigned int uval)
+{
+  if (operand->size == 4)
+    info->fprintf_func (info->stream, "%s%s%s%s",
+			uval & 8 ? "x" : "",
+			uval & 4 ? "y" : "",
+			uval & 2 ? "z" : "",
+			uval & 1 ? "w" : "");
+  else if (operand->size == 2)
+    info->fprintf_func (info->stream, "%c", "xyzw"[uval]);
+  else
+    abort ();
 }
 
 /* Print operand OPERAND of OPCODE, using STATE to track inter-operand state.
@@ -999,12 +1042,12 @@ print_insn_arg (struct disassemble_info *info,
       break;
 
     case OP_REG:
+    case OP_OPTIONAL_REG:
       {
 	const struct mips_reg_operand *reg_op;
 
 	reg_op = (const struct mips_reg_operand *) operand;
-	if (reg_op->reg_map)
-	  uval = reg_op->reg_map[uval];
+	uval = mips_decode_reg_operand (reg_op, uval);
 	print_reg (info, opcode, reg_op->reg_type, uval);
 
 	state->last_reg_type = reg_op->reg_type;
@@ -1202,6 +1245,11 @@ print_insn_arg (struct disassemble_info *info,
     case OP_PC:
       infprintf (is, "$pc");
       break;
+
+    case OP_VU0_SUFFIX:
+    case OP_VU0_MATCH_SUFFIX:
+      print_vu0_channel (info, operand, uval);
+      break;
     }
 }
 
@@ -1230,6 +1278,11 @@ print_insn_args (struct disassemble_info *info,
 	case '(':
 	case ')':
 	  infprintf (is, "%c", *s);
+	  break;
+
+	case '#':
+	  ++s;
+	  infprintf (is, "%c%c", *s, *s);
 	  break;
 
 	default:
@@ -1346,8 +1399,7 @@ print_insn_mips (bfd_vma memaddr,
 	      /* Figure out instruction type and branch delay information.  */
 	      if ((op->pinfo & INSN_UNCOND_BRANCH_DELAY) != 0)
 	        {
-		  if ((op->pinfo & (INSN_WRITE_GPR_31
-				    | INSN_WRITE_GPR_D)) != 0)
+		  if ((op->pinfo & (INSN_WRITE_GPR_31 | INSN_WRITE_1)) != 0)
 		    info->insn_type = dis_jsr;
 		  else
 		    info->insn_type = dis_branch;
@@ -1367,6 +1419,14 @@ print_insn_mips (bfd_vma memaddr,
 		info->insn_type = dis_dref;
 
 	      infprintf (is, "%s", op->name);
+	      if (op->pinfo2 & INSN2_VU0_CHANNEL_SUFFIX)
+		{
+		  unsigned int uval;
+
+		  infprintf (is, ".");
+		  uval = mips_extract_operand (&mips_vu0_channel_mask, word);
+		  print_vu0_channel (info, &mips_vu0_channel_mask, uval);
+		}
 
 	      if (op->args[0])
 		{
@@ -1565,7 +1625,7 @@ print_mips16_insn_arg (struct disassemble_info *info,
 	     }
 	}
 
-      print_insn_arg (info, state, opcode, operand, baseaddr, uval);
+      print_insn_arg (info, state, opcode, operand, baseaddr + 1, uval);
       break;
     }
 }
@@ -1749,15 +1809,15 @@ print_insn_mips16 (bfd_vma memaddr, struct disassemble_info *info)
 	  /* Figure out branch instruction type and delay slot information.  */
 	  if ((op->pinfo & INSN_UNCOND_BRANCH_DELAY) != 0)
 	    info->branch_delay_insns = 1;
-	  if ((op->pinfo & (INSN_UNCOND_BRANCH_DELAY
-			    | MIPS16_INSN_UNCOND_BRANCH)) != 0)
+	  if ((op->pinfo & INSN_UNCOND_BRANCH_DELAY) != 0
+	      || (op->pinfo2 & INSN2_UNCOND_BRANCH) != 0)
 	    {
 	      if ((op->pinfo & INSN_WRITE_GPR_31) != 0)
 		info->insn_type = dis_jsr;
 	      else
 		info->insn_type = dis_branch;
 	    }
-	  else if ((op->pinfo & MIPS16_INSN_COND_BRANCH) != 0)
+	  else if ((op->pinfo2 & INSN2_COND_BRANCH) != 0)
 	    info->insn_type = dis_condbranch;
 
 	  return length;
@@ -1894,7 +1954,7 @@ print_insn_micromips (bfd_vma memaddr, struct disassemble_info *info)
 	  if (((op->pinfo & INSN_UNCOND_BRANCH_DELAY)
 	       | (op->pinfo2 & INSN2_UNCOND_BRANCH)) != 0)
 	    {
-	      if ((op->pinfo & (INSN_WRITE_GPR_31 | INSN_WRITE_GPR_T)) != 0)
+	      if ((op->pinfo & (INSN_WRITE_GPR_31 | INSN_WRITE_1)) != 0)
 		info->insn_type = dis_jsr;
 	      else
 		info->insn_type = dis_branch;
