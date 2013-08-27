@@ -130,6 +130,8 @@ static int strict_type_checking = 1;
 
 static int static_bounds_p (const struct range_bounds *bounds);
 
+static struct type *resolve_dynamic_values_1 (struct type *, CORE_ADDR, int);
+
 /* A function to show whether opaque types are resolved.  */
 
 static void
@@ -1596,6 +1598,12 @@ resolve_dynamic_prop (const struct dwarf2_prop *prop, CORE_ADDR address,
 struct type *
 resolve_dynamic_values (struct type *type, CORE_ADDR address)
 {
+  return resolve_dynamic_values_1 (type, address, 1);
+}
+
+static struct type *
+resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
+{
   struct type *resolved_type = 0;
   const struct type *range_type;
   const struct dwarf2_prop *prop;
@@ -1611,17 +1619,23 @@ resolve_dynamic_values (struct type *type, CORE_ADDR address)
             TYPE_CODE (TYPE_TARGET_TYPE (type)) != TYPE_CODE_STRING)
       return type;
 
-  obstack_init (&obstack);
-  cleanup = make_cleanup_obstack_free (&obstack);
-  copied_types = create_copied_types_hash (&obstack);
-  make_cleanup_htab_delete (copied_types);
-  resolved_type = copy_type_recursive (TYPE_OBJFILE (type), type, copied_types);
-  do_cleanups (cleanup);
+  if (copy)
+    {
+      obstack_init (&obstack);
+      cleanup = make_cleanup_obstack_free (&obstack);
+      copied_types = create_copied_types_hash (&obstack);
+      make_cleanup_htab_delete (copied_types);
+      resolved_type = copy_type_recursive (TYPE_OBJFILE (type), type, copied_types);
+      do_cleanups (cleanup);
+    }
+  else
+    resolved_type = type;
 
   /* Recursive resolve target types first.  */
   if (TYPE_TARGET_TYPE (resolved_type))
     TYPE_TARGET_TYPE (resolved_type) =
-            resolve_dynamic_values (TYPE_TARGET_TYPE (resolved_type), address);
+            resolve_dynamic_values_1 (TYPE_TARGET_TYPE (resolved_type),
+                                      address, 0);
 
   if (!dynamic_type_p (resolved_type))
     {
