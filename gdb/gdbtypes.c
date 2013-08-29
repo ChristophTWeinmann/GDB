@@ -1570,7 +1570,7 @@ static int
 resolve_dynamic_prop (const struct dwarf2_prop *prop, CORE_ADDR address,
 		      CORE_ADDR *value)
 {
-  if (value == NULL)
+  if (prop == NULL || value == NULL)
     return 0;
 
   switch (prop->kind)
@@ -1646,11 +1646,11 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
     }
 
   prop = TYPE_ALLOCATED_PROP (type);
-  if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
+  if (resolve_dynamic_prop (prop, address, &value))
     TYPE_ALLOCATED (resolved_type) = value;
 
   prop = TYPE_ASSOCIATED_PROP (type);
-  if (prop != NULL && resolve_dynamic_prop (prop, address, &value))
+  if (resolve_dynamic_prop (prop, address, &value))
     TYPE_ASSOCIATED (resolved_type) = value;
 
   if ((TYPE_CODE (type) != TYPE_CODE_ARRAY
