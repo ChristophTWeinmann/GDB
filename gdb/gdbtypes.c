@@ -1611,6 +1611,7 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
   struct cleanup *cleanup;
   htab_t copied_types;
   CORE_ADDR value;
+  int index;
 
   /* If type does not have dynamic properties and is not a string, which might
      might by dynamic.  */
@@ -1643,6 +1644,18 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
               TYPE_CODE (TYPE_TARGET_TYPE (resolved_type)) == TYPE_CODE_STRING)
         return resolved_type;
       return type;
+    }
+
+  /* Resolve field types if any.  */
+  if (type)
+    {
+      for (index = 0; index < TYPE_NFIELDS (resolved_type); index++)
+        {
+          int byte_offset = TYPE_FIELD_BITPOS (resolved_type, index) / 8;
+          TYPE_FIELD_TYPE (resolved_type, index) =
+              resolve_dynamic_values_1 (TYPE_FIELD_TYPE (resolved_type, index),
+                  address, 0);
+        }
     }
 
   prop = TYPE_ALLOCATED_PROP (type);
