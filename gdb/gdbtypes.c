@@ -1545,9 +1545,15 @@ static_bounds_p (const struct range_bounds *bounds)
    dynamic values.  */
 
 static int
-dynamic_type_p (const struct type *type)
+resolved_type_p (const struct type *type)
 {
+  if (type == NULL)
+    return 0;
+
   if (TYPE_ALLOCATED_PROP (type) != NULL)
+    return 1;
+
+  if (TYPE_ASSOCIATED_PROP (type) != NULL)
     return 1;
 
   if ((TYPE_CODE (type) == TYPE_CODE_ARRAY ||
@@ -1558,6 +1564,79 @@ dynamic_type_p (const struct type *type)
       if (TYPE_CODE (range_type) == TYPE_CODE_RANGE)
         return !static_bounds_p (TYPE_RANGE_DATA (range_type));
     }
+
+  if (TYPE_CODE (type) == TYPE_CODE_STRUCT)
+    {
+      int index;
+      for (index = 0; index < TYPE_NFIELDS (type); index++)
+        {
+          if (TYPE_FIELD_TYPE (type, index) && TYPE_NFIELDS (TYPE_FIELD_TYPE (type, index)) >= 1)
+          {
+            const struct type *range_type =
+              TYPE_INDEX_TYPE (TYPE_FIELD_TYPE (type, index));
+            if (TYPE_CODE (range_type) == TYPE_CODE_RANGE)
+              return !static_bounds_p (TYPE_RANGE_DATA (range_type));
+          }
+        }
+    }
+  return 0;
+}
+
+/* Predicates if the type has dynamic values, which are not resolved yet.  */
+
+static int
+is_dynamic_type (const struct type *type)
+{
+  if (type == NULL)
+    return 0;
+
+  if ((TYPE_CODE (type) == TYPE_CODE_ARRAY ||
+          TYPE_CODE (type) == TYPE_CODE_STRING) && TYPE_NFIELDS (type) >= 1)
+    {
+      const struct type *range_type = TYPE_INDEX_TYPE (type);
+      if (TYPE_CODE (range_type) == TYPE_CODE_RANGE)
+        {
+          if (TYPE_RANGE_DATA (range_type)
+              && (TYPE_LOW_BOUND_BLOCK (range_type)
+                  || TYPE_HIGH_BOUND_BLOCK (range_type)
+                  || TYPE_LOW_BOUND_LOCLIST (range_type)
+                  || TYPE_HIGH_BOUND_LOCLIST (range_type)))
+            return 1;
+        }
+    }
+
+  if (TYPE_ASSOCIATED_PROP (type))
+    return 1;
+
+  if (TYPE_ALLOCATED_PROP (type))
+    return 1;
+
+  return 0;
+}
+
+/* Predicates if a type has nested dynamic types inside (e.g. pointers).  */
+
+static int
+type_contains_dynamic_types (const struct type *type)
+{
+  int i;
+  int dynamic_field_types = 0;
+  int dynamic_target_type = 0;
+
+  if (type == NULL)
+    return 0;
+
+  /* Count how many dynamic fields a field type has.  */
+  for (i = 0; i < TYPE_NFIELDS (type); ++i)
+    if (TYPE_FIELD_TYPE (type, i) && is_dynamic_type (TYPE_FIELD_TYPE (type, i)))
+      dynamic_field_types++;
+
+  /* Check if the target type does have dynamic attributes.  */
+  if (TYPE_TARGET_TYPE (type))
+    dynamic_target_type = is_dynamic_type (TYPE_TARGET_TYPE (type));
+
+  if (dynamic_field_types || is_dynamic_type (type) || dynamic_target_type)
+    return 1;
 
   return 0;
 }
@@ -1613,12 +1692,9 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
   CORE_ADDR value;
   int index;
 
-  /* If type does not have dynamic properties and is not a string, which might
-     might by dynamic.  */
-  if (type == NULL && !dynamic_type_p (type))
-    if (!TYPE_TARGET_TYPE (type) ||
-            TYPE_CODE (TYPE_TARGET_TYPE (type)) != TYPE_CODE_STRING)
-      return type;
+  /* If type does not have dynamic properties return original type.  */
+  if (!type_contains_dynamic_types (type))
+    return type;
 
   if (copy)
     {
@@ -1638,13 +1714,9 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
             resolve_dynamic_values_1 (TYPE_TARGET_TYPE (resolved_type),
                                       address, 0);
 
-  if (!dynamic_type_p (resolved_type))
-    {
-      if (TYPE_TARGET_TYPE (resolved_type) &&
-              TYPE_CODE (TYPE_TARGET_TYPE (resolved_type)) == TYPE_CODE_STRING)
-        return resolved_type;
-      return type;
-    }
+  if (!resolved_type_p (resolved_type)
+          || !type_contains_dynamic_types (resolved_type))
+    return resolved_type;
 
   /* Resolve field types if any.  */
   if (type)
@@ -1652,9 +1724,10 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
       for (index = 0; index < TYPE_NFIELDS (resolved_type); index++)
         {
           int byte_offset = TYPE_FIELD_BITPOS (resolved_type, index) / 8;
+
           TYPE_FIELD_TYPE (resolved_type, index) =
               resolve_dynamic_values_1 (TYPE_FIELD_TYPE (resolved_type, index),
-                  address, 0);
+                  address + byte_offset, 0);
         }
     }
 
@@ -1668,13 +1741,13 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
 
   if ((TYPE_CODE (type) != TYPE_CODE_ARRAY
       && TYPE_CODE (type) != TYPE_CODE_STRING) || TYPE_NFIELDS (type) == 0)
-    return type;
+    return resolved_type;
 
   range_type = TYPE_INDEX_TYPE (resolved_type);
 
   if (TYPE_CODE (range_type) != TYPE_CODE_RANGE
       || static_bounds_p (TYPE_RANGE_DATA (range_type)))
-    return type;
+    return resolved_type;
 
   if (TYPE_ALLOCATED_PROP (resolved_type) && !TYPE_ALLOCATED (resolved_type))
     {

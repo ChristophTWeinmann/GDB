@@ -3205,7 +3205,7 @@ value_from_ulongest (struct type *type, ULONGEST num)
 struct value *
 value_from_pointer (struct type *type, CORE_ADDR addr)
 {
-  struct value *val = allocate_value (type);
+  struct value *val = allocate_value (resolve_dynamic_values (type, addr));
 
   store_typed_address (value_contents_raw (val), check_typedef (type), addr);
   return val;
