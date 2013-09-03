@@ -90,8 +90,8 @@ gdb_test "print onev%ivla" "\\$\\d+ = \\( *\\( *\\( *2, *2, *2,\[()2, .\]*\\)" "
 gdb_test "print onev" "\\$\\d+ = \\( *\\( *\\( *\\( *2, *2, *2,\[()2, .\]*\\)" "print onev"
 gdb_test "print onep" ".*real\\\(kind=4\\\) :: ivla\\\(11,22,33\\\).*" "print onep"
 
-gdb_test "ptype onev%ivla" "type = integer\\\(kind=4\\\) \\\(11,22,33\\\)" "ptype onev%ivla"
-gdb_test "ptype onep%ivla" "type = integer\\\(kind=4\\\) \\\(11,22,33\\\)" "ptype onep%ivla"
+gdb_test "ptype onev%ivla" "type = real\\\(kind=4\\\) \\\(11,22,33\\\)" "ptype onev%ivla"
+gdb_test "ptype onep%ivla" "type = real\\\(kind=4\\\) \\\(11,22,33\\\)" "ptype onep%ivla"
 
-gdb_test "ptype onev%ivla(1,1)" "type = integer\\\(kind=4\\\)" "ptype onev%ivla(1,1)"
-gdb_test "ptype onep%ivla(1,1)" "type = integer\\\(kind=4\\\)" "ptype onep%ivla(1,1)"
+gdb_test "ptype onev%ivla(1,1,1)" "type = real\\\(kind=4\\\)" "ptype onev%ivla(1,1,1)"
+gdb_test "ptype onep%ivla(1,1,1)" "type = real\\\(kind=4\\\)" "ptype onep%ivla(1,1,1)"
