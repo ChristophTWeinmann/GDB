@@ -21803,9 +21803,8 @@ attr_to_dwarf2_prop (struct die_info *die, const struct attribute *attr, struct 
     }
   else if (attr_form_is_constant (attr))
     {
-      prop->data.const_val = dwarf2_get_attr_constant_value (attr, -1);
+      prop->data.const_val = dwarf2_get_attr_constant_value (attr, 0);
       prop->kind = DWARF_CONST;
-      gdb_assert (prop->data.const_val != -1);
     }
   else
     {
