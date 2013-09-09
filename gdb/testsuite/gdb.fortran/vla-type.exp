@@ -45,7 +45,7 @@ gdb_continue_to_breakpoint "twov-filled"
 gdb_test "print twov%ivla1(5, 11, 23)" "\\$\\d+ = 1" "print twov%ivla1(5, 11, 23)"
 gdb_test "print twov%ivla1(1, 2, 3)" "\\$\\d+ = 123" "print twov%ivla1(1, 2, 3)"
 gdb_test "print twov%ivla1(3, 2, 1)" "\\$\\d+ = 321" "print twov%ivla1(3, 2, 1)"
-gdb_test "ptype twov" "type = Type two\r\n\\s+real\\\(kind=4\\\) :: ivla1\\\(5,12,99\\\)\r\n\\s+real\\\(kind=4\\\) :: ivla2\\\(5,12\\\)\r\nEnd Type two" "ptype twov"
+gdb_test "ptype twov" "type = Type two\r\n\\s+real\\\(kind=4\\\) :: ivla1\\\(5,12,99\\\)\r\n\\s+real\\\(kind=4\\\) :: ivla2\\\(9,12\\\)\r\nEnd Type two" "ptype twov"
 
 # Check type with attribute at beginn of type
 gdb_breakpoint [gdb_get_line_number "threev-filled"]
