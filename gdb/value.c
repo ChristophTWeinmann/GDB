@@ -3222,15 +3222,16 @@ value_from_contents_and_address (struct type *type,
 				 CORE_ADDR address)
 {
   struct value *v;
-
-  if (valaddr == NULL)
-    v = allocate_value_lazy (type);
-  else
-    v = value_from_contents (type, valaddr);
+  struct type *resolved_type;
 
   /* If TYPE has dynamic values e.g. array bounds, try transforming values to
      static ones based on the address.  */
-  resolve_value_type (v, address);
+  resolved_type = resolve_dynamic_values (type, address);
+
+  if (valaddr == NULL)
+    v = allocate_value_lazy (resolved_type);
+  else
+    v = value_from_contents (resolved_type, valaddr);
 
   set_value_address (v, address);
   VALUE_LVAL (v) = lval_memory;
