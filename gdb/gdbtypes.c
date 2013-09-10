@@ -1684,6 +1684,7 @@ static struct type *
 resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
 {
   struct type *resolved_type = 0;
+  struct type *tmp_resolved_type;
   const struct type *range_type;
   const struct dwarf2_prop *prop;
   struct obstack obstack;
@@ -1692,8 +1693,17 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
   CORE_ADDR value;
   int index;
 
+  tmp_resolved_type = check_typedef (type);
+
+  /* Unpack pointers if existing.  */
+  while (TYPE_CODE (tmp_resolved_type) == TYPE_CODE_PTR)
+    {
+      tmp_resolved_type = TYPE_TARGET_TYPE (tmp_resolved_type);
+      CHECK_TYPEDEF (tmp_resolved_type);
+    }
+
   /* If type does not have dynamic properties return original type.  */
-  if (!type_contains_dynamic_types (type))
+  if (!type_contains_dynamic_types (tmp_resolved_type))
     return type;
 
   if (copy)
