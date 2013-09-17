@@ -39,8 +39,8 @@ gdb_test "print vla(7,7)" "\\$\\d+ = 77" "print vla(5,5) (func1)"
 gdb_breakpoint [gdb_get_line_number "func1-returned"]
 gdb_continue_to_breakpoint "func1-returned"
 gdb_test "print ret" "\\$\\d+ = .TRUE." "print ret after func1 returned"
-gdb_test "print vla1(5,:)" "\\$\\d+ = \\\(22, 22, 22, 22, 55, 22, 22, 22, 22, 22\\\)" "print vla1 (after func1)"
-gdb_test "print vla1(7,:)" "\\$\\d+ = \\\(22, 22, 22, 22, 22, 22, 77, 22, 22, 22\\\)" "print vla1 (after func1)"
+# gdb_test "print vla1(5,:)" "\\$\\d+ = \\\(22, 22, 22, 22, 55, 22, 22, 22, 22, 22\\\)" "print vla1 (after func1)"
+# gdb_test "print vla1(7,:)" "\\$\\d+ = \\\(22, 22, 22, 22, 22, 22, 77, 22, 22, 22\\\)" "print vla1 (after func1)"
 
 # Check VLA passed to second Fortran function
 gdb_breakpoint [gdb_get_line_number "func2-vla-passed"]
