@@ -818,25 +818,41 @@ static int
 value_check_printable (struct value *val, struct ui_file *stream,
 		       const struct value_print_options *options)
 {
+  struct type *type;
+
   if (val == 0)
     {
       fprintf_filtered (stream, _("<address of value unknown>"));
       return 0;
     }
 
+  type = value_type (val);
+
   if (value_entirely_optimized_out (val))
     {
-      if (options->summary && !val_print_scalar_type_p (value_type (val)))
+      if (options->summary && !val_print_scalar_type_p (type))
 	fprintf_filtered (stream, "...");
       else
 	val_print_optimized_out (stream);
       return 0;
     }
 
-  if (TYPE_CODE (value_type (val)) == TYPE_CODE_INTERNAL_FUNCTION)
+  if (TYPE_CODE (type) == TYPE_CODE_INTERNAL_FUNCTION)
     {
       fprintf_filtered (stream, _("<internal function %s>"),
 			value_internal_function_name (val));
+      return 0;
+    }
+
+  if (TYPE_ASSOCIATED_PROP (type) && !TYPE_ASSOCIATED (type))
+    {
+      val_print_not_associated (stream);
+      return 0;
+    }
+
+  if (TYPE_ALLOCATED_PROP (type) && !TYPE_ALLOCATED (type))
+    {
+      val_print_not_allocated (stream);
       return 0;
     }
 
