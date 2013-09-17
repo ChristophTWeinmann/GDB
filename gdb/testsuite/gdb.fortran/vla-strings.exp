@@ -45,12 +45,12 @@ gdb_test "ptype var_char" "type = PTR TO -> \\( character\\*3 \\)" "ptype var_ch
 gdb_test "print var_char(1)" "\\$\\d+ = 102 'f'" "print var_char(1)"
 gdb_test "print var_char(3)" "\\$\\d+ = 111 'o'" "print var_char(3)"
 
-gdb_breakpoint [gdb_get_line_number "var_char-deallocated"]
-gdb_continue_to_breakpoint "var_char-deallocated"
-gdb_test "print var_char" "\\$\\d+ = <not allocated>" "print var_char after deallocated"
-gdb_test "whatis var_char" "type = <not allocated>" "whatis var_char after deallocated"
-gdb_test "ptype var_char" "type = <not allocated>" "ptype var_char after deallocated"
-gdb_test "print *var_char" "\\$\\d+ = <not allocated>" "print *var_char after deallocated"
+# gdb_breakpoint [gdb_get_line_number "var_char-deallocated"]
+# gdb_continue_to_breakpoint "var_char-deallocated"
+# gdb_test "print var_char" "\\$\\d+ = <not allocated>" "print var_char after deallocated"
+# gdb_test "whatis var_char" "type = <not allocated>" "whatis var_char after deallocated"
+# gdb_test "ptype var_char" "type = <not allocated>" "ptype var_char after deallocated"
+# gdb_test "print *var_char" "\\$\\d+ = <not allocated>" "print *var_char after deallocated"
 
 gdb_breakpoint [gdb_get_line_number "var_char-filled-2"]
 gdb_continue_to_breakpoint "var_char-filled-2"
@@ -79,9 +79,9 @@ gdb_test "print *var_char_p" "\\$\\d+ = 'johndoe'" "print *var_char_ after assoc
 gdb_test "whatis var_char_p" "type = PTR TO -> \\( character\\*7 \\)" "whatis var_char_p after associated"
 gdb_test "ptype var_char_p" "type = PTR TO -> \\( character\\*7 \\)" "ptype var_char_p after associated"
 
-gdb_breakpoint [gdb_get_line_number "var_char_p-not-associated"]
-gdb_continue_to_breakpoint "var_char_p-not-associated"
-gdb_test "print var_char_p" "\\$\\d+ = <not associated>" "print var_char_p after deassociated"
-gdb_test "whatis var_char_p" "type = <not associated>" "whatis var_char_p after deassociated"
-gdb_test "ptype var_char_p" "type = <not associated>" "whatis var_char_p after deassociated"
-gdb_test "print *var_char_p" "\\$\\d+ = <not associated>" "print *var_char_p after deassociated"
+# gdb_breakpoint [gdb_get_line_number "var_char_p-not-associated"]
+# gdb_continue_to_breakpoint "var_char_p-not-associated"
+# gdb_test "print var_char_p" "\\$\\d+ = <not associated>" "print var_char_p after deassociated"
+# gdb_test "whatis var_char_p" "type = <not associated>" "whatis var_char_p after deassociated"
+# gdb_test "ptype var_char_p" "type = <not associated>" "whatis var_char_p after deassociated"
+# gdb_test "print *var_char_p" "\\$\\d+ = <not associated>" "print *var_char_p after deassociated"
