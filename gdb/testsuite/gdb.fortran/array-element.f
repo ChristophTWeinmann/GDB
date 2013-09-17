@@ -25,8 +25,9 @@ c by Wu Zhou. (woodzltc@cn.ibm.com)
 
         subroutine sub(a,n)
         dimension a(n)
-        do 100 i = 1, n 
-          a(i) = i
+        do 100 i = 1, n
+          a(i) = i ! continue
 100     continue
+
         return
         end

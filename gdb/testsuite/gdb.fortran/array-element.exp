@@ -38,11 +38,15 @@ gdb_test "break $bp_location" \
 
 gdb_test "continue" \
     "Continuing\\..*Breakpoint.*" \
-    "continue to breakpoint"
+    "continue to first breakpoint hit"
+
+gdb_test "continue" \
+    "Continuing\\..*Breakpoint.*" \
+    "continue to second breakpoint hit"
 gdb_test "print a(1)" ".*1 = 1.*" "print the first element of array a"
 
 gdb_test "continue" \
     "Continuing\\..*Breakpoint.*" \
-    "continue to breakpoint once again"
+    "continue to third breakpoint hit"
 gdb_test "print a(2)" ".*2 = 2.*" "print the second element of array a"
 
