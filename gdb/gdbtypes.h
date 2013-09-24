@@ -203,11 +203,11 @@ enum type_instance_flag_value
 
 /* Allocated status of type object.  If set to non-zero it means the object
    is allocated. A zero value means it is not allocated.  */
-#define TYPE_ALLOCATED(t)       (TYPE_MAIN_TYPE (t)->flag_allocated)
+#define TYPE_NOT_ALLOCATED(t)       (TYPE_MAIN_TYPE (t)->flag_not_allocated)
 
 /* Associated status of type object.  If set to non-zero it means the object
    is associated. A zero value means it is not associated.  */
-#define TYPE_ASSOCIATED(t)      (TYPE_MAIN_TYPE (t)->flag_associated)
+#define TYPE_NOT_ASSOCIATED(t)      (TYPE_MAIN_TYPE (t)->flag_not_associated)
 
 /* Determines whetter the data_location is an address or whetter it needs to be
    calculated out of the Dwarf block.  */
@@ -443,8 +443,8 @@ struct main_type
      because they packs nicely here.  See the TYPE_* macros for
      documentation about these fields.  */
 
-  unsigned int flag_allocated : 1;
-  unsigned int flag_associated : 1;
+  unsigned int flag_not_allocated : 1;
+  unsigned int flag_not_associated : 1;
   unsigned int flag_data_location_is_address : 1;
   unsigned int flag_unsigned : 1;
   unsigned int flag_nosign : 1;

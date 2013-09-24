@@ -201,9 +201,9 @@ value_subscripted_rvalue (struct value *array, LONGEST index, int lowerbound)
   if (index < lowerbound || (!TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (array_type)
 			     && elt_offs >= TYPE_LENGTH (array_type)))
     {
-      if (TYPE_ASSOCIATED_PROP (array_type) && !TYPE_ASSOCIATED (array_type))
+      if (!TYPE_ASSOCIATED_PROP (array_type) && TYPE_NOT_ASSOCIATED (array_type))
         error (_("no such vector element because not associated"));
-      else if (TYPE_ALLOCATED_PROP (array_type) && !TYPE_ALLOCATED (array_type))
+      else if (!TYPE_ALLOCATED_PROP (array_type) && TYPE_NOT_ALLOCATED (array_type))
         error (_("no such vector element because not allocated"));
       else
         error (_("no such vector element"));

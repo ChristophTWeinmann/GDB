@@ -57,12 +57,12 @@ f_print_type (struct type *type, const char *varstring, struct ui_file *stream,
   enum type_code code;
   int demangled_args;
 
-  if (TYPE_ASSOCIATED_PROP (type) && !TYPE_ASSOCIATED (type))
+  if (!TYPE_ASSOCIATED_PROP (type) && TYPE_NOT_ASSOCIATED (type))
     {
       val_print_not_associated (stream);
       return;
     }
-  if (TYPE_ALLOCATED_PROP (type) && !TYPE_ALLOCATED (type))
+  if (!TYPE_ALLOCATED_PROP (type) && TYPE_NOT_ALLOCATED (type))
     {
       val_print_not_allocated (stream);
       return;

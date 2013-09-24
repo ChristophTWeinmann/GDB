@@ -1749,11 +1749,17 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
 
   prop = TYPE_ALLOCATED_PROP (type);
   if (resolve_dynamic_prop (prop, address, &value))
-    TYPE_ALLOCATED (resolved_type) = value;
+    {
+      TYPE_NOT_ALLOCATED (resolved_type) = value == 0;
+      TYPE_ALLOCATED_PROP (resolved_type) = NULL;
+    }
 
   prop = TYPE_ASSOCIATED_PROP (type);
   if (resolve_dynamic_prop (prop, address, &value))
-    TYPE_ASSOCIATED (resolved_type) = value;
+    {
+      TYPE_NOT_ASSOCIATED (resolved_type) = value == 0;
+      TYPE_ASSOCIATED_PROP (resolved_type) = NULL;
+    }
 
   if ((TYPE_CODE (type) != TYPE_CODE_ARRAY
       && TYPE_CODE (type) != TYPE_CODE_STRING) || TYPE_NFIELDS (type) == 0)
@@ -1765,7 +1771,7 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
       || static_bounds_p (TYPE_RANGE_DATA (range_type)))
     return resolved_type;
 
-  if (TYPE_ALLOCATED_PROP (resolved_type) && !TYPE_ALLOCATED (resolved_type))
+  if (!TYPE_ALLOCATED_PROP (resolved_type) && TYPE_NOT_ALLOCATED (resolved_type))
     {
       TYPE_LOW_BOUND (range_type) = 0;
       TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
@@ -1791,10 +1797,11 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
         }
 
       baton = TYPE_DATA_LOCATION_BATON (type);
-      if (dwarf2_locexpr_baton_eval (baton, address, &value))
+      if (!TYPE_DATA_LOCATION_IS_ADDRESS (resolved_type)
+	  && dwarf2_locexpr_baton_eval (baton, address, &value))
         {
-          TYPE_DATA_LOCATION_ADDR (resolved_type) = value;
-          TYPE_DATA_LOCATION_IS_ADDRESS (resolved_type) = 1;
+	  TYPE_DATA_LOCATION_ADDR (resolved_type) = value;
+	  TYPE_DATA_LOCATION_IS_ADDRESS (resolved_type) = 1;
         }
     }
 
@@ -3759,8 +3766,10 @@ recursive_dump_type (struct type *type, int spaces)
 	break;
     }
 
-  printfi_filtered (spaces, "allocated %d\n", TYPE_ALLOCATED (type));
-  printfi_filtered (spaces, "associated %d\n", TYPE_ASSOCIATED (type));
+  if (TYPE_ALLOCATED_PROP (type))
+    printfi_filtered (spaces, "allocated %d\n", !TYPE_NOT_ALLOCATED (type));
+  if (TYPE_ASSOCIATED_PROP (type))
+    printfi_filtered (spaces, "associated %d\n", !TYPE_NOT_ASSOCIATED (type));
 
   if (spaces == 0)
     obstack_free (&dont_print_type_obstack, NULL);
@@ -3815,6 +3824,10 @@ copy_type_recursive_1 (struct objfile *objfile,
   struct type_pair *stored, pair;
   void **slot;
   struct type *new_type;
+
+
+  if (!TYPE_OBJFILE_OWNED (type))
+    return type;
 
   /* This type shouldn't be pointing to any types in other objfiles;
      if it did, the type might disappear unexpectedly.  */
