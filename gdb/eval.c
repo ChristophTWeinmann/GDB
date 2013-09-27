@@ -3040,12 +3040,6 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos)
       type = check_typedef (value_type (val));
       return value_from_longest (size_type, (LONGEST) TYPE_LENGTH (type));
 
-    case OP_VAR_VALUE:
-      (*pos) += 4;
-      type = check_typedef (SYMBOL_TYPE (exp->elts[pc + 2].symbol));
-      return
-	value_from_longest (size_type, (LONGEST) TYPE_LENGTH (type));
-
     default:
       val = evaluate_subexp (NULL_TYPE, exp, pos, EVAL_AVOID_SIDE_EFFECTS);
       return value_from_longest (size_type,
