@@ -3936,7 +3936,10 @@ copy_type_recursive_1 (struct objfile *objfile,
   else if (TYPE_CODE (type) == TYPE_CODE_STRUCT
 	   || TYPE_CODE (type) == TYPE_CODE_UNION
 	   || TYPE_CODE (type) == TYPE_CODE_NAMESPACE)
-    INIT_CPLUS_SPECIFIC (new_type);
+    {
+      ALLOCATE_CPLUS_STRUCT_TYPE (new_type);
+      TYPE_TYPE_SPECIFIC (new_type) = TYPE_TYPE_SPECIFIC (type);
+    }
 
   return new_type;
 }
