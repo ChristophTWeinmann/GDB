@@ -3576,13 +3576,11 @@ value_fetch_lazy (struct value *val)
         else if (TYPE_DATA_LOCATION_BATON (value_enclosing_type (val)) != NULL)
           {
             CORE_ADDR value_address = 0;
+            struct dwarf2_locexpr_baton *dlbaton;
 
-            struct dwarf2_locexpr_baton *dlbaton =
-              TYPE_DATA_LOCATION_BATON (value_enclosing_type (val));
-            (void)dwarf2_locexpr_baton_eval (dlbaton, addr, &value_address);
-
-            if (value_address != 0)
-              addr = value_address + value_offset (val);
+            dlbaton = TYPE_DATA_LOCATION_BATON (value_enclosing_type (val));
+            if (dwarf2_locexpr_baton_eval (dlbaton, addr, &value_address))
+              addr += value_offset (val);
           }
       }
 
