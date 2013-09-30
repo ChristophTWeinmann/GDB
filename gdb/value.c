@@ -3406,9 +3406,6 @@ readjust_indirect_value_type (struct value *value, struct type *enc_type,
 			      struct type *original_type,
 			      struct value *original_value)
 {
-  /* Re-adjust type.  */
-  deprecated_set_value_type (value, TYPE_TARGET_TYPE (original_type));
-
   /* Add embedding info.  */
   set_value_enclosing_type (value, enc_type);
   set_value_embedded_offset (value, value_pointed_to_offset (original_value));
