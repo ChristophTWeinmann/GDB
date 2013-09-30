@@ -1653,6 +1653,8 @@ extern int is_public_ancestor (struct type *, struct type *);
 
 extern int is_unique_ancestor (struct type *, struct value *);
 
+extern int is_dynamic_type (const struct type *);
+
 /* Overload resolution */
 
 #define LENGTH_MATCH(bv) ((bv)->rank[0])

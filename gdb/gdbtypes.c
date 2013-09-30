@@ -1546,68 +1546,33 @@ static_bounds_p (const struct range_bounds *bounds)
     && bounds->high.kind == DWARF_CONST;
 }
 
-/* Predicate tests whether a type has dynamic values. Returns 1 if TYPE has any
-   dynamic values.  */
-
-static int
-resolved_type_p (const struct type *type)
-{
-  if (type == NULL)
-    return 0;
-
-  if (TYPE_ALLOCATED_PROP (type) != NULL)
-    return 1;
-
-  if (TYPE_ASSOCIATED_PROP (type) != NULL)
-    return 1;
-
-  if ((TYPE_CODE (type) == TYPE_CODE_ARRAY ||
-          TYPE_CODE (type) == TYPE_CODE_STRING) && TYPE_NFIELDS (type) >= 1)
-    {
-      const struct type *range_type = TYPE_INDEX_TYPE (type);
-
-      if (TYPE_CODE (range_type) == TYPE_CODE_RANGE)
-        return !static_bounds_p (TYPE_RANGE_DATA (range_type));
-    }
-
-  if (TYPE_CODE (type) == TYPE_CODE_STRUCT)
-    {
-      int index;
-      for (index = 0; index < TYPE_NFIELDS (type); index++)
-        {
-          if (TYPE_FIELD_TYPE (type, index) && TYPE_NFIELDS (TYPE_FIELD_TYPE (type, index)) >= 1)
-          {
-            const struct type *range_type =
-              TYPE_INDEX_TYPE (TYPE_FIELD_TYPE (type, index));
-            if (TYPE_CODE (range_type) == TYPE_CODE_RANGE)
-              return !static_bounds_p (TYPE_RANGE_DATA (range_type));
-          }
-        }
-    }
-  return 0;
-}
-
 /* Predicates if the type has dynamic values, which are not resolved yet.  */
 
-static int
+int
 is_dynamic_type (const struct type *type)
 {
+  int index;
+
   if (type == NULL)
     return 0;
 
-  if ((TYPE_CODE (type) == TYPE_CODE_ARRAY ||
-          TYPE_CODE (type) == TYPE_CODE_STRING) && TYPE_NFIELDS (type) >= 1)
+  switch (TYPE_CODE (type))
     {
-      const struct type *range_type = TYPE_INDEX_TYPE (type);
-      if (TYPE_CODE (range_type) == TYPE_CODE_RANGE)
-        {
-          if (TYPE_RANGE_DATA (range_type)
-              && (TYPE_LOW_BOUND_BLOCK (range_type)
-                  || TYPE_HIGH_BOUND_BLOCK (range_type)
-                  || TYPE_LOW_BOUND_LOCLIST (range_type)
-                  || TYPE_HIGH_BOUND_LOCLIST (range_type)))
-            return 1;
-        }
+    case TYPE_CODE_PTR:
+    case TYPE_CODE_REF:
+      return 0;
+    }
+
+  if (TYPE_DATA_LOCATION_IS_ADDRESS (type))
+    return 0;
+
+  if (TYPE_CODE (type) == TYPE_CODE_RANGE)
+    {
+      if (TYPE_LOW_BOUND_BLOCK (type)
+	  || TYPE_HIGH_BOUND_BLOCK (type)
+	  || TYPE_LOW_BOUND_LOCLIST (type)
+	  || TYPE_HIGH_BOUND_LOCLIST (type))
+	return 1;
     }
 
   if (TYPE_ASSOCIATED_PROP (type))
@@ -1616,32 +1581,9 @@ is_dynamic_type (const struct type *type)
   if (TYPE_ALLOCATED_PROP (type))
     return 1;
 
-  return 0;
-}
-
-/* Predicates if a type has nested dynamic types inside (e.g. pointers).  */
-
-static int
-type_contains_dynamic_types (const struct type *type)
-{
-  int i;
-  int dynamic_field_types = 0;
-  int dynamic_target_type = 0;
-
-  if (type == NULL)
-    return 0;
-
-  /* Count how many dynamic fields a field type has.  */
-  for (i = 0; i < TYPE_NFIELDS (type); ++i)
-    if (TYPE_FIELD_TYPE (type, i) && is_dynamic_type (TYPE_FIELD_TYPE (type, i)))
-      dynamic_field_types++;
-
-  /* Check if the target type does have dynamic attributes.  */
-  if (TYPE_TARGET_TYPE (type))
-    dynamic_target_type = is_dynamic_type (TYPE_TARGET_TYPE (type));
-
-  if (dynamic_field_types || is_dynamic_type (type) || dynamic_target_type)
-    return 1;
+  for (index = 0; index < TYPE_NFIELDS (type); index++)
+    if (is_dynamic_type (TYPE_FIELD_TYPE (type, index)))
+      return 1;
 
   return 0;
 }
@@ -1665,8 +1607,6 @@ resolve_dynamic_prop (const struct dwarf2_prop *prop, CORE_ADDR address,
 
 	return dwarf2_locexpr_baton_eval (&baton, address, value);
       }
-      /* TODO(sag): I will hold back the changes to make location lists work
-       until I have a testcase.  */
     case DWARF_LOCLIST:
     case DWARF_CONST:
       break;
@@ -1682,6 +1622,14 @@ resolve_dynamic_prop (const struct dwarf2_prop *prop, CORE_ADDR address,
 struct type *
 resolve_dynamic_values (struct type *type, CORE_ADDR address)
 {
+  const struct type *ty = check_typedef (type);
+
+  if (!TYPE_OBJFILE_OWNED (ty))
+    return type;
+
+  if (!is_dynamic_type (ty))
+    return type;
+
   return resolve_dynamic_values_1 (type, address, 1);
 }
 
@@ -1689,27 +1637,13 @@ static struct type *
 resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
 {
   struct type *resolved_type = 0;
-  struct type *tmp_resolved_type;
-  const struct type *range_type;
-  const struct dwarf2_prop *prop;
   struct obstack obstack;
   struct cleanup *cleanup;
+  const struct dwarf2_prop *prop;
+  const struct dwarf2_locexpr_baton *baton;
   htab_t copied_types;
-  CORE_ADDR value;
+  CORE_ADDR value, adjusted_address = address;
   int index;
-
-  tmp_resolved_type = check_typedef (type);
-
-  /* Unpack pointers if existing.  */
-  while (TYPE_CODE (tmp_resolved_type) == TYPE_CODE_PTR)
-    {
-      tmp_resolved_type = TYPE_TARGET_TYPE (tmp_resolved_type);
-      CHECK_TYPEDEF (tmp_resolved_type);
-    }
-
-  /* If type does not have dynamic properties return original type.  */
-  if (!type_contains_dynamic_types (tmp_resolved_type))
-    return type;
 
   if (copy)
     {
@@ -1720,32 +1654,11 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
       resolved_type = copy_type_recursive_1
 	(TYPE_OBJFILE (type), type, copied_types, &obstack);
       do_cleanups (cleanup);
+      TYPE_POINTER_TYPE (resolved_type) = NULL;
+      TYPE_REFERENCE_TYPE (resolved_type) = NULL;
     }
   else
     resolved_type = type;
-
-  /* Recursive resolve target types first.  */
-  if (TYPE_TARGET_TYPE (resolved_type))
-    TYPE_TARGET_TYPE (resolved_type) =
-            resolve_dynamic_values_1 (TYPE_TARGET_TYPE (resolved_type),
-                                      address, 0);
-
-  if (!resolved_type_p (resolved_type)
-          || !type_contains_dynamic_types (resolved_type))
-    return resolved_type;
-
-  /* Resolve field types if any.  */
-  if (type)
-    {
-      for (index = 0; index < TYPE_NFIELDS (resolved_type); index++)
-        {
-          int byte_offset = TYPE_FIELD_BITPOS (resolved_type, index) / 8;
-
-          TYPE_FIELD_TYPE (resolved_type, index) =
-              resolve_dynamic_values_1 (TYPE_FIELD_TYPE (resolved_type, index),
-                  address + byte_offset, 0);
-        }
-    }
 
   prop = TYPE_ALLOCATED_PROP (type);
   if (resolve_dynamic_prop (prop, address, &value))
@@ -1761,50 +1674,99 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
       TYPE_ASSOCIATED_PROP (resolved_type) = NULL;
     }
 
-  if ((TYPE_CODE (type) != TYPE_CODE_ARRAY
-      && TYPE_CODE (type) != TYPE_CODE_STRING) || TYPE_NFIELDS (type) == 0)
-    return resolved_type;
-
-  range_type = TYPE_INDEX_TYPE (resolved_type);
-
-  if (TYPE_CODE (range_type) != TYPE_CODE_RANGE
-      || static_bounds_p (TYPE_RANGE_DATA (range_type)))
-    return resolved_type;
-
-  if (!TYPE_ALLOCATED_PROP (resolved_type) && TYPE_NOT_ALLOCATED (resolved_type))
+  baton = TYPE_DATA_LOCATION_BATON (type);
+  if (!TYPE_DATA_LOCATION_IS_ADDRESS (type)
+      && dwarf2_locexpr_baton_eval (baton, address, &value))
     {
-      TYPE_LOW_BOUND (range_type) = 0;
-      TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
-      TYPE_HIGH_BOUND (range_type) = 0;
-      TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+      adjusted_address = value;
+      TYPE_DATA_LOCATION_ADDR (resolved_type) = value;
+      TYPE_DATA_LOCATION_IS_ADDRESS (resolved_type) = 1;
+    }
+
+  if (TYPE_CODE (type) == TYPE_CODE_ARRAY)
+    {
+      struct type *target_type = resolved_type, *last_target_type;
+
+      do {
+	struct type *range_type = TYPE_INDEX_TYPE (target_type);
+	if (!TYPE_ALLOCATED_PROP (resolved_type)
+	    && TYPE_NOT_ALLOCATED (resolved_type))
+	  {
+	    TYPE_LOW_BOUND (range_type) = 0;
+	    TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+	    TYPE_HIGH_BOUND (range_type) = 0;
+	    TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+	  }
+	else
+	  {
+	    prop = &TYPE_RANGE_DATA (range_type)->low;
+	    if (resolve_dynamic_prop (prop, address, &value))
+	      {
+		TYPE_LOW_BOUND (range_type) = value;
+		TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+	      }
+
+	    prop = &TYPE_RANGE_DATA (range_type)->high;
+	    if (resolve_dynamic_prop (prop, address, &value))
+	      {
+		TYPE_HIGH_BOUND (range_type) = value;
+		TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+	      }
+	  }
+	last_target_type = target_type;
+      } while ((target_type = TYPE_TARGET_TYPE (target_type)) != NULL
+	       && TYPE_CODE (target_type) == TYPE_CODE_ARRAY);
+
+      TYPE_TARGET_TYPE (last_target_type) =
+	resolve_dynamic_values_1 (target_type, adjusted_address, 0);
+    }
+  else if (TYPE_CODE (type) == TYPE_CODE_STRING)
+    {
+      struct type *range_type = TYPE_INDEX_TYPE (resolved_type);
+
+      if (!TYPE_ALLOCATED_PROP (resolved_type)
+	  && TYPE_NOT_ALLOCATED (resolved_type))
+     	{
+	  TYPE_LOW_BOUND (range_type) = 0;
+	  TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+	  TYPE_HIGH_BOUND (range_type) = 0;
+	  TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+	}
+      else
+	{
+	  prop = &TYPE_RANGE_DATA (range_type)->low;
+	  if (resolve_dynamic_prop (prop, address, &value))
+	    {
+	      TYPE_LOW_BOUND (range_type) = value;
+	      TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
+	    }
+	  prop = &TYPE_RANGE_DATA (range_type)->high;
+	  if (resolve_dynamic_prop (prop, address, &value))
+	    {
+	      TYPE_HIGH_BOUND (range_type) = value;
+	      TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
+	    }
+	}
     }
   else
     {
-      const struct dwarf2_locexpr_baton *baton;
+      if (TYPE_TARGET_TYPE (resolved_type))
+	TYPE_TARGET_TYPE (resolved_type) =
+	  resolve_dynamic_values_1 (TYPE_TARGET_TYPE (resolved_type), address, 0);
 
-      prop = &TYPE_RANGE_DATA (range_type)->low;
-      if (resolve_dynamic_prop (prop, address, &value))
-        {
-          TYPE_LOW_BOUND (range_type) = value;
-          TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
-        }
-
-      prop = &TYPE_RANGE_DATA (range_type)->high;
-      if (resolve_dynamic_prop (prop, address, &value))
-        {
-          TYPE_HIGH_BOUND (range_type) = value;
-          TYPE_HIGH_BOUND_KIND (range_type) = DWARF_CONST;
-        }
-
-      baton = TYPE_DATA_LOCATION_BATON (type);
-      if (!TYPE_DATA_LOCATION_IS_ADDRESS (resolved_type)
-	  && dwarf2_locexpr_baton_eval (baton, address, &value))
-        {
-	  TYPE_DATA_LOCATION_ADDR (resolved_type) = value;
-	  TYPE_DATA_LOCATION_IS_ADDRESS (resolved_type) = 1;
-        }
+      /* Resolve field types if any.  */
+      for (index = 0; index < TYPE_NFIELDS (resolved_type); index++)
+	{
+	  struct type *index_type = TYPE_FIELD_TYPE (resolved_type, index);
+	  if (index_type == NULL)
+	    continue;
+	  if (TYPE_CODE (index_type) != TYPE_CODE_RANGE)
+	    address += TYPE_FIELD_BITPOS (resolved_type, index) / 8;
+	  TYPE_FIELD_TYPE (resolved_type, index) =
+	    resolve_dynamic_values_1 (TYPE_FIELD_TYPE (resolved_type, index),
+				      address, 0);
+	}
     }
-
   check_typedef (resolved_type);
 
   return resolved_type;
@@ -3825,8 +3787,7 @@ copy_type_recursive_1 (struct objfile *objfile,
   void **slot;
   struct type *new_type;
 
-
-  if (!TYPE_OBJFILE_OWNED (type))
+  if (!TYPE_OBJFILE_OWNED (type) && !is_dynamic_type (check_typedef (type)))
     return type;
 
   /* This type shouldn't be pointing to any types in other objfiles;
