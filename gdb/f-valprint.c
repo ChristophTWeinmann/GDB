@@ -471,6 +471,55 @@ info_common_command (char *comname, int from_tty)
 }
 
 void
+f_value_print (struct value *val, struct ui_file *stream,
+	       const struct value_print_options *options)
+{
+  struct type *type, *val_type;
+  struct value_print_options local_opts = *options;
+
+  local_opts.deref_ref = 1;
+
+  /* If it is a pointer, indicate what it points to.
+     Print type also if it is a reference.  */
+
+  /* Preserve the original type before stripping typedefs.  We prefer
+     to pass down the original type when possible, but for local
+     checks it is better to look past the typedefs.  */
+  val_type = value_type (val);
+  type = check_typedef (val_type);
+
+
+  switch (TYPE_CODE (type))
+    {
+    case TYPE_CODE_PTR:
+    case TYPE_CODE_REF:
+      fprintf_filtered (stream, "(");
+      /* Deal with pointers to vla to correctly resolve the bounds of the
+	 target type.  */
+      if (is_dynamic_type (TYPE_TARGET_TYPE (type)))
+	{
+	  struct value *v = value_addr (value_ind (val));
+
+	  type_print (value_type (v), "", stream, -1);
+	}
+      else
+	type_print (value_type (val), "", stream, -1);
+      fprintf_filtered (stream, ") ");
+    }
+
+  if (!value_initialized (val))
+    fprintf_filtered (stream, " [uninitialized] ");
+
+  /* Instead of passing all value attributes individual to the function,
+     pass the only value to the printing interface.  */
+  val_print (val_type, value_contents_for_printing (val),
+	     value_embedded_offset (val),
+	     value_address (val),
+	     stream, 0,
+	     val, &local_opts, current_language);
+}
+
+void
 _initialize_f_valprint (void)
 {
   add_info ("common", info_common_command,

@@ -34,6 +34,9 @@ extern void f_val_print (struct type *, const gdb_byte *, int, CORE_ADDR,
 			 const struct value *,
 			 const struct value_print_options *);
 
+extern void f_value_print (struct value *val, struct ui_file *stream,
+			   const struct value_print_options *options);
+
 /* Language-specific data structures */
 
 /* In F90 subrange expression, either bound could be empty, indicating that
