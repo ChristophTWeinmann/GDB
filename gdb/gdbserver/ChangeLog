@@ -1,3 +1,184 @@
+2013-09-28  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac (AC_CHECK_HEADERS): Add sys/syscall.h
+	* config.in, configure: Regenerated.
+
+2013-09-18  Yao Qi  <yao@codesourcery.com>
+
+	PR server/15959
+	* server.c (start_inferior): Clear 'resume_info'.
+
+2013-09-16  Jiong Wang  <jiwang@tilera.com>
+
+	* linux-tile-low.c (tile_regsets): Modify the size field to 64-bit
+	for each register.
+
+2013-09-16  Jiong Wang  <jiwang@tilera.com>
+
+	* configure.srv <tilegx*-*-linux*>: Remove linux-osdata.o from and add
+	linux-tile-low.o to srv_tgtobj.
+
+2013-09-16  Will Newton  <will.newton@linaro.org>
+
+	* linux-aarch64-low.c (aarch64_linux_set_debug_regs): Zero
+	out regs.
+
+2013-09-06  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (gdb_proc_service_h, regdef_h, regcache_h)
+	(signals_def, signals_h, ptid_h, ax_h, agent_h, linux_btrace_h)
+	(linux_osdata_h, vec_h, gdb_vecs_h, host_defs_h, libiberty_h)
+	(server_h, gdbthread_h, linux_low_h, linux_ptrace_h)
+	(gdb_thread_db_h, linux_procfs_h, lynx_low_h, nto_low_h)
+	(mips_linux_watch_h, i386_low_h, win32_low_h): Delete.
+
+2013-09-06  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (linux-btrace.o, mips-linux-watch.o): Remove
+	explicit header dependencies and use $COMPILE/$POSTCOMPILE.
+
+2013-09-06  Pedro Alves  <palves@redhat.com>
+
+	* linux-amd64-ipa.c: Include tracepoint.h.
+	* linux-i386-ipa.c: Include tracepoint.h.
+
+2013-09-06  Ricard Wanderlof  <ricardw@axis.com>
+
+	* linux-crisv32-low.c (PTRACE_GET_THREAD_AREA): New macro.
+	(ps_get_thread_area): New function.
+
+2013-09-06  Ricard Wanderlof  <ricardw@axis.com>
+
+	* linux-crisv32-low.c (elf_gregset_t): Delete typedef.
+	(initialize_low_arch): Call init_registers_crisv32 rather than
+	init_register_crisv32.
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* server.h (handle_vFile, hostio_last_error_from_errno): Move
+	to ...
+	* hostio.h: ... this new file.
+	* hostio.c, server.c, linux-low.c, nto-low.c, spu-low,
+	win32-low.c: Include hostio.h.
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* server.h (gdb_client_data, handler_func, callback_handler_func)
+	(delete_file_handler, add_file_handler, append_callback_event)
+	(delete_callback_event, start_event_loop, initialize_event_loop):
+	Move to event-loop.h and include it.
+	* event-loop.h: New file.
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* dll.c, inferiors.c, remote-utils.c, server.c: Include "dll.h".
+	* server.h (struct dll_info, all_dlls, dlls_changed, clear_dlls)
+	(loaded_dll, unloaded_dll): Move to ...
+	* dll.h: ... this new file.
+	* inferiors.c, remote-utils.c, win32-low.c: Include "dll.h".
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* server.h (current_process, get_thread_process, all_processes)
+	(add_inferior_to_list, for_each_inferior, current_inferior)
+	(remove_inferior, add_process, remove_process, find_process_pid)
+	(have_started_inferiors_p, have_attached_inferiors_p)
+	(thread_id_to_gdb_id, thread_to_gdb_id, gdb_id_to_thread_id)
+	(clear_inferiors, find_inferior, find_inferior_id)
+	(inferior_target_data, set_inferior_target_data)
+	(inferior_regcache_data, set_inferior_regcache_data): Move to
+	inferiors.h, and include it.
+	* inferiors.h: New file.
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* server.h (struct emit_ops, current_insn_ptr, emit_error):
+	Move ...
+        * ax.h: ... here.
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* ax.c, linux-low.c, linux-x86-low.c, server.c: Include
+	tracepoint.h.
+	* server.h (IPA_BUFSIZ, initialize_tracepoint, tracing)
+	(disconnected_tracing, tracepoint_look_up_symbols, stop_tracing
+	(handle_tracepoint_general_set, handle_tracepoint_query)
+	(tracepoint_finished_step, tracepoint_was_hit)
+	(release_while_stepping_state_list, current_traceframe)
+	(in_readonly_region, traceframe_read_mem)
+	(fetch_traceframe_registers, traceframe_read_sdata)
+	(traceframe_read_info, struct fast_tpoint_collect_status)
+	(fast_tracepoint_collecting, force_unlock_trace_buffer)
+	(handle_tracepoit_bkpts, initialize_low_tracepoint)
+	(supply_fast_tracepoint_registers)
+	(supply_static_tracepoint_registers, set_trampoline_buffer_space)
+	(ipa_tdesc, claim_trampoline_space)
+	(have_fast_tracepoint_trampoline_buffer, gdb_agent_about_to_close)
+	(agent_mem_read, agent_get_trace_state_variable_value)
+	(agent_set_trace_state_variable_value, agent_tsv_read)
+	(agent_mem_read_string, get_raw_reg_func_addr)
+	(get_get_tsv_func_addr, get_set_tsv_func_addr): Move to ...
+	* tracepoint.h: ... this new file.
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* server.h (perror_with_name, error, fatal, warning, paddress)
+	(pulongest, plongest, phex_nz, pfildes): Move to utils.h, and
+	include it.
+	* utils.h: New file.
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* server.h (remote_debug, noack_mode, transport_is_reliable)
+	(gdb_connected, STDIO_CONNECTION_NAME, remote_connection_is_stdio)
+	(read_ptid, write_ptid, putpkt, putpkt_binary, putpkt_notif)
+	(getpkt, remote_prepare, remote_open, remote_close, write_ok)
+	(write_enn, initialize_async_io, enable_async_io)
+	(disable_async_io, check_remote_input_interrupt_request)
+	(convert_ascii_to_int, convert_int_to_ascii, new_thread_notify)
+	(dead_thread_notify, prepare_resume_reply)
+	(decode_address_to_semicolon, decode_address, decode_m_packet)
+	(decode_M_packet, decode_X_packet, decode_xfer_write)
+	(decode_search_memory_packet, unhexify, hexify)
+	(remote_escape_output, unpack_varlen_hex, clear_symbol_cache)
+	(look_up_one_symbol, relocate_instruction)
+	(monitor_output): Move to remote-utils.h, and include it.
+	* remote-utils.h: New file.
+
+2013-09-05  Pedro Alves  <palves@redhat.com>
+
+	* server.h (_): Delete.
+
+2013-09-02  Pedro Alves  <palves@redhat.com>
+
+	* tracepoint.c (TRACEFRAME_EOB_MARKER_SIZE): New macro.
+	(init_trace_buffer): Ensure at least TRACEFRAME_EOB_MARKER_SIZE is
+	allocated.
+	(trace_buffer_alloc): Use TRACEFRAME_EOB_MARKER_SIZE.
+
+2013-09-02  Pierre Muller  <muller@sourceware.org>
+
+	* win32-low.c (child_xfer_memory): Check if ReadProcessMemory
+	or WriteProcessMemory complete successfully and handle
+	ERROR_PARTIAL_COPY error.
+
+2013-09-02  Pedro Alves  <palves@redhat.com>
+
+	* server.c (gdb_read_memory): Return -1 on traceframe memory read
+	error instead of EIO.
+
+2013-08-28  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR server/15604
+	* linux-low.c: Include filestuff.h.
+	(linux_create_inferior) <pid == 0>: Call close_most_fds.
+	* lynx-low.c: Include filestuff.h.
+	(lynx_create_inferior) <pid == 0>: Call close_most_fds.
+	* server.c: Include filestuff.h.
+	(main): Call notice_open_fds.
+	* spu-low.c: Include filestuff.h.
+	(spu_create_inferior) <pid == 0>: Call close_most_fds.
+
 2013-08-22  Luis Machado  <lgustavo@codesourcery.com>
 
 	* Makefile.in: Explain why ../target and ../nat are not

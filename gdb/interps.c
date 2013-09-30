@@ -101,6 +101,9 @@ interp_new (const char *name, const struct interp_procs *procs)
   new_interp->procs = procs;
   new_interp->inited = 0;
 
+  /* Check for required procs.  */
+  gdb_assert (procs->command_loop_proc != NULL);
+
   return new_interp;
 }
 
@@ -319,16 +322,9 @@ current_interp_display_prompt_p (void)
 void
 current_interp_command_loop (void)
 {
-  /* Somewhat messy.  For the moment prop up all the old ways of
-     selecting the command loop.  `deprecated_command_loop_hook'
-     should be deprecated.  */
-  if (deprecated_command_loop_hook != NULL)
-    deprecated_command_loop_hook ();
-  else if (current_interpreter != NULL
-	   && current_interpreter->procs->command_loop_proc != NULL)
-    current_interpreter->procs->command_loop_proc (current_interpreter->data);
-  else
-    cli_command_loop ();
+  gdb_assert (current_interpreter != NULL);
+
+  current_interpreter->procs->command_loop_proc (current_interpreter->data);
 }
 
 int
@@ -386,7 +382,6 @@ clear_interpreter_hooks (void)
   deprecated_target_wait_hook = 0;
   deprecated_call_command_hook = 0;
   deprecated_error_begin_hook = 0;
-  deprecated_command_loop_hook = 0;
 }
 
 /* This is a lazy init routine, called the first time the interpreter

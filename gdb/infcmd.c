@@ -1765,7 +1765,7 @@ finish_command (char *arg, int from_tty)
       if (from_tty)
 	{
 	  printf_filtered (_("Run till exit from "));
-	  print_stack_frame (get_selected_frame (NULL), 1, LOCATION);
+	  print_stack_frame (get_selected_frame (NULL), 1, LOCATION, 0);
 	}
 
       proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT, 1);
@@ -1790,7 +1790,7 @@ finish_command (char *arg, int from_tty)
       else
 	printf_filtered (_("Run till exit from "));
 
-      print_stack_frame (get_selected_frame (NULL), 1, LOCATION);
+      print_stack_frame (get_selected_frame (NULL), 1, LOCATION, 0);
     }
 
   if (execution_direction == EXEC_REVERSE)
@@ -2033,6 +2033,12 @@ default_print_one_register_info (struct ui_file *file,
       fprintf_filtered (file, "*value not available*\n");
       return;
     }
+  else if (value_optimized_out (val))
+    {
+      val_print_optimized_out (file);
+      fprintf_filtered (file, "\n");
+      return;
+    }
 
   /* If virtual format is floating, print it that way, and in raw
      hex.  */
@@ -2107,9 +2113,6 @@ default_print_registers_info (struct gdbarch *gdbarch,
 
   for (i = 0; i < numregs; i++)
     {
-      struct type *regtype;
-      struct value *val;
-
       /* Decide between printing all regs, non-float / vector regs, or
          specific reg.  */
       if (regnum == -1)
@@ -2137,16 +2140,9 @@ default_print_registers_info (struct gdbarch *gdbarch,
 	  || *(gdbarch_register_name (gdbarch, i)) == '\0')
 	continue;
 
-      regtype = register_type (gdbarch, i);
-      val = allocate_value (regtype);
-
-      /* Get the data in raw format.  */
-      if (! deprecated_frame_register_read (frame, i, value_contents_raw (val)))
-	mark_value_bytes_unavailable (val, 0, TYPE_LENGTH (value_type (val)));
-
       default_print_one_register_info (file,
 				       gdbarch_register_name (gdbarch, i),
-				       val);
+				       get_frame_register_value (frame, i));
     }
 }
 
@@ -2334,7 +2330,7 @@ kill_command (char *arg, int from_tty)
       if (target_has_stack)
 	{
 	  printf_filtered (_("In %s,\n"), target_longname);
-	  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC);
+	  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
 	}
     }
   bfd_cache_close_all ();

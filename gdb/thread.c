@@ -929,7 +929,7 @@ print_thread_info (struct ui_out *uiout, char *requested_threads, int pid)
 	  print_stack_frame (get_selected_frame (NULL),
 			     /* For MI output, print frame level.  */
 			     ui_out_is_mi_like_p (uiout),
-			     LOCATION);
+			     LOCATION, 0);
 	}
 
       if (ui_out_is_mi_like_p (uiout))
@@ -1077,12 +1077,12 @@ restore_selected_frame (struct frame_id a_frame_id, int frame_level)
   if (frame_level > 0 && !ui_out_is_mi_like_p (current_uiout))
     {
       warning (_("Couldn't restore frame #%d in "
-		 "current thread, at reparsed frame #0\n"),
+		 "current thread.  Bottom (innermost) frame selected:"),
 	       frame_level);
       /* For MI, we should probably have a notification about
 	 current frame change.  But this error is not very
 	 likely, so don't bother for now.  */
-      print_stack_frame (get_selected_frame (NULL), 1, SRC_LINE);
+      print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
     }
 }
 
@@ -1467,7 +1467,7 @@ do_captured_thread_select (struct ui_out *uiout, void *tidstr)
   else
     {
       ui_out_text (uiout, "\n");
-      print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC);
+      print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
     }
 
   /* Since the current thread may have changed, see if there is any

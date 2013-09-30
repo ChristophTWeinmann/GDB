@@ -34,6 +34,7 @@
 #include "target.h"
 #include "value.h"
 #include "opcode/cris.h"
+#include "osabi.h"
 #include "arch-utils.h"
 #include "regcache.h"
 #include "gdb_assert.h"
@@ -44,6 +45,8 @@
 #include "solib-svr4.h"
 #include "gdb_string.h"
 #include "dis-asm.h"
+
+#include "cris-tdep.h"
 
 enum cris_num_regs
 {
@@ -163,14 +166,6 @@ static const char *usr_cmd_cris_mode = cris_mode_normal;
 
 /* Whether to make use of Dwarf-2 CFI (default on).  */
 static int usr_cmd_cris_dwarf2_cfi = 1;
-
-/* CRIS architecture specific information.  */
-struct gdbarch_tdep
-{
-  unsigned int cris_version;
-  const char *cris_mode;
-  int cris_dwarf2_cfi;
-};
 
 /* Sigtramp identification code copied from i386-linux-tdep.c.  */
 
@@ -3819,25 +3814,25 @@ cris_delayed_get_disassembler (bfd_vma addr, struct disassemble_info *info)
   return print_insn (addr, info);
 }
 
-/* Copied from <asm/elf.h>.  */
-typedef unsigned long elf_greg_t;
+/* Originally from <asm/elf.h>.  */
+typedef unsigned char cris_elf_greg_t[4];
 
 /* Same as user_regs_struct struct in <asm/user.h>.  */
 #define CRISV10_ELF_NGREG 35
-typedef elf_greg_t elf_gregset_t[CRISV10_ELF_NGREG];
+typedef cris_elf_greg_t cris_elf_gregset_t[CRISV10_ELF_NGREG];
 
 #define CRISV32_ELF_NGREG 32
-typedef elf_greg_t crisv32_elf_gregset_t[CRISV32_ELF_NGREG];
+typedef cris_elf_greg_t crisv32_elf_gregset_t[CRISV32_ELF_NGREG];
 
-/* Unpack an elf_gregset_t into GDB's register cache.  */
+/* Unpack a cris_elf_gregset_t into GDB's register cache.  */
 
 static void 
-cris_supply_gregset (struct regcache *regcache, elf_gregset_t *gregsetp)
+cris_supply_gregset (struct regcache *regcache, cris_elf_gregset_t *gregsetp)
 {
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int i;
-  elf_greg_t *regp = *gregsetp;
+  cris_elf_greg_t *regp = *gregsetp;
   static char zerobuf[4] = {0};
 
   /* The kernel dumps all 32 registers as unsigned longs, but supply_register
@@ -3868,12 +3863,12 @@ fetch_core_registers (struct regcache *regcache,
 		      char *core_reg_sect, unsigned core_reg_size,
                       int which, CORE_ADDR reg_addr)
 {
-  elf_gregset_t gregset;
+  cris_elf_gregset_t gregset;
 
   switch (which)
     {
     case 0:
-      if (core_reg_size != sizeof (elf_gregset_t) 
+      if (core_reg_size != sizeof (cris_elf_gregset_t)
 	  && core_reg_size != sizeof (crisv32_elf_gregset_t))
         {
           warning (_("wrong size gregset struct in core file"));
@@ -4176,9 +4171,9 @@ cris_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   frame_unwind_append_unwinder (gdbarch, &cris_frame_unwind);
   frame_base_set_default (gdbarch, &cris_frame_base);
 
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, svr4_ilp32_fetch_link_map_offsets);
-  
+  /* Hook in ABI-specific overrides, if they have been registered.  */
+  gdbarch_init_osabi (info, gdbarch);
+
   /* FIXME: cagney/2003-08-27: It should be possible to select a CRIS
      disassembler, even when there is no BFD.  Does something like
      "gdb; target remote; disassmeble *0x123" work?  */

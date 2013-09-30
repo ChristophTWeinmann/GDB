@@ -132,8 +132,12 @@ int sync_execution = 0;
 
 static ptid_t previous_inferior_ptid;
 
-/* Default behavior is to detach newly forked processes (legacy).  */
-int detach_fork = 1;
+/* If set (default for legacy reasons), when following a fork, GDB
+   will detach from one of the fork branches, child or parent.
+   Exactly which branch is detached depends on 'set follow-fork-mode'
+   setting.  */
+
+static int detach_fork = 1;
 
 int debug_displaced = 0;
 static void
@@ -497,7 +501,7 @@ follow_fork (void)
 
 	/* Tell the target to do whatever is necessary to follow
 	   either parent or child.  */
-	if (target_follow_fork (follow_child))
+	if (target_follow_fork (follow_child, detach_fork))
 	  {
 	    /* Target refused to follow, or there's some other reason
 	       we shouldn't resume.  */
@@ -4939,7 +4943,7 @@ process_event_stop_test:
 		 or stepped back out of a signal handler to the first instruction
 		 of the function.  Just keep going, which will single-step back
 		 to the caller.  */
-	      if (ecs->stop_func_start != stop_pc)
+	      if (ecs->stop_func_start != stop_pc && ecs->stop_func_start != 0)
 		{
 		  struct symtab_and_line sr_sal;
 
@@ -6098,7 +6102,7 @@ normal_stop (void)
 	     LOCATION: Print only location
 	     SRC_AND_LOC: Print location and source line.  */
 	  if (do_frame_printing)
-	    print_stack_frame (get_selected_frame (NULL), 0, source_flag);
+	    print_stack_frame (get_selected_frame (NULL), 0, source_flag, 1);
 
 	  /* Display the auto-display expressions.  */
 	  do_displays ();

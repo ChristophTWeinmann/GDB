@@ -25,6 +25,8 @@
 #include "mem-break.h"
 #include "win32-low.h"
 #include "gdbthread.h"
+#include "dll.h"
+#include "hostio.h"
 
 #include <stdint.h>
 #include <windows.h>
@@ -278,21 +280,30 @@ static int
 child_xfer_memory (CORE_ADDR memaddr, char *our, int len,
 		   int write, struct target_ops *target)
 {
-  SIZE_T done;
+  BOOL success;
+  SIZE_T done = 0;
+  DWORD lasterror = 0;
   uintptr_t addr = (uintptr_t) memaddr;
 
   if (write)
     {
-      WriteProcessMemory (current_process_handle, (LPVOID) addr,
-			  (LPCVOID) our, len, &done);
+      success = WriteProcessMemory (current_process_handle, (LPVOID) addr,
+				    (LPCVOID) our, len, &done);
+      if (!success)
+	lasterror = GetLastError ();
       FlushInstructionCache (current_process_handle, (LPCVOID) addr, len);
     }
   else
     {
-      ReadProcessMemory (current_process_handle, (LPCVOID) addr, (LPVOID) our,
-			 len, &done);
+      success = ReadProcessMemory (current_process_handle, (LPCVOID) addr,
+				   (LPVOID) our, len, &done);
+      if (!success)
+	lasterror = GetLastError ();
     }
-  return done;
+  if (!success && lasterror == ERROR_PARTIAL_COPY && done > 0)
+    return done;
+  else
+    return success ? done : -1;
 }
 
 /* Clear out any old thread list and reinitialize it to a pristine

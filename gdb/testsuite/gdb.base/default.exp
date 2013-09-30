@@ -83,7 +83,7 @@ gdb_test "call" "The history is empty..*" "call"
 gdb_test "catch" "Catch requires an event name..*" "catch"
 
 #test cd
-gdb_test "cd" "Working directory \[^\r\n\]*\\."
+gdb_test "cd" "Working directory \[^\r\n\]*\(\r\n \\(canonically \[^\r\n\]*\\)\)?\\."
 
 #test clear
 gdb_test "clear" "No source file specified..*" "clear"
@@ -621,6 +621,7 @@ set show_conv_list \
 	{$_probe_arg9 = <error: No frame selected>} \
 	{$_probe_arg10 = <error: No frame selected>} \
 	{$_probe_arg11 = <error: No frame selected>} \
+	{$_isvoid = <internal function _isvoid>} \
     }
 if ![skip_python_tests] {
     append show_conv_list \

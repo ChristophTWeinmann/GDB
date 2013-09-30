@@ -230,8 +230,25 @@ solib_find (char *in_pathname, int *fd)
     {
       int need_dir_separator;
 
-      need_dir_separator = (!IS_DIR_SEPARATOR (in_pathname[0])
-			    && !HAS_TARGET_DRIVE_SPEC (fskind, in_pathname));
+      /* Concatenate the sysroot and the target reported filename.  We
+	 may need to glue them with a directory separator.  Cases to
+	 consider:
+
+        | sysroot         | separator | in_pathname    |
+        |-----------------+-----------+----------------|
+        | /some/dir       | /         | c:/foo/bar.dll |
+        | /some/dir       |           | /foo/bar.dll   |
+        | remote:         |           | c:/foo/bar.dll |
+        | remote:         |           | /foo/bar.dll   |
+        | remote:some/dir | /         | c:/foo/bar.dll |
+        | remote:some/dir |           | /foo/bar.dll   |
+
+	IOW, we don't need to add a separator if IN_PATHNAME already
+	has one, or when the the sysroot is exactly "remote:".
+	There's no need to check for drive spec explicitly, as we only
+	get here if IN_PATHNAME is considered an absolute path.  */
+      need_dir_separator = !(IS_DIR_SEPARATOR (in_pathname[0])
+			     || strcmp (REMOTE_SYSROOT_PREFIX, sysroot) == 0);
 
       /* Cat the prefixed pathname together.  */
       temp_pathname = concat (sysroot,
@@ -319,14 +336,16 @@ solib_find (char *in_pathname, int *fd)
 
   /* If not found, search the solib_search_path (if any).  */
   if (found_file < 0 && solib_search_path != NULL)
-    found_file = openp (solib_search_path, OPF_TRY_CWD_FIRST,
+    found_file = openp (solib_search_path,
+			OPF_TRY_CWD_FIRST | OPF_RETURN_REALPATH,
 			in_pathname, O_RDONLY | O_BINARY, &temp_pathname);
 
   /* If not found, next search the solib_search_path (if any) for the basename
      only (ignoring the path).  This is to allow reading solibs from a path
      that differs from the opened path.  */
   if (found_file < 0 && solib_search_path != NULL)
-    found_file = openp (solib_search_path, OPF_TRY_CWD_FIRST,
+    found_file = openp (solib_search_path,
+			OPF_TRY_CWD_FIRST | OPF_RETURN_REALPATH,
 			target_lbasename (fskind, in_pathname),
 			O_RDONLY | O_BINARY, &temp_pathname);
 
@@ -339,16 +358,16 @@ solib_find (char *in_pathname, int *fd)
   if (found_file < 0 && gdb_sysroot_is_empty)
     found_file = openp (get_in_environ (current_inferior ()->environment,
 					"PATH"),
-			OPF_TRY_CWD_FIRST, in_pathname, O_RDONLY | O_BINARY,
-			&temp_pathname);
+			OPF_TRY_CWD_FIRST | OPF_RETURN_REALPATH, in_pathname,
+			O_RDONLY | O_BINARY, &temp_pathname);
 
   /* If not found, next search the inferior's $LD_LIBRARY_PATH
      environment variable.  */
   if (found_file < 0 && gdb_sysroot_is_empty)
     found_file = openp (get_in_environ (current_inferior ()->environment,
 					"LD_LIBRARY_PATH"),
-			OPF_TRY_CWD_FIRST, in_pathname, O_RDONLY | O_BINARY,
-			&temp_pathname);
+			OPF_TRY_CWD_FIRST | OPF_RETURN_REALPATH, in_pathname,
+			O_RDONLY | O_BINARY, &temp_pathname);
 
   *fd = found_file;
   return temp_pathname;
@@ -599,7 +618,7 @@ solib_read_symbols (struct so_list *so, int flags)
 	  /* Have we already loaded this shared object?  */
 	  ALL_OBJFILES (so->objfile)
 	    {
-	      if (filename_cmp (so->objfile->name, so->so_name) == 0
+	      if (filename_cmp (objfile_name (so->objfile), so->so_name) == 0
 		  && so->objfile->addr_low == so->addr_low)
 		break;
 	    }
@@ -608,7 +627,7 @@ solib_read_symbols (struct so_list *so, int flags)
 
 	  sap = build_section_addr_info_from_section_table (so->sections,
 							    so->sections_end);
-	  so->objfile = symbol_file_add_from_bfd (so->abfd,
+	  so->objfile = symbol_file_add_from_bfd (so->abfd, so->so_name,
 						  flags, sap, OBJF_SHARED,
 						  NULL);
 	  so->objfile->addr_low = so->addr_low;

@@ -336,6 +336,9 @@ clean:
 	rm -f powerpc-isa205-altivec32l.c powerpc-isa205-vsx32l.c powerpc-isa205-altivec64l.c
 	rm -f powerpc-isa205-vsx64l.c
 	rm -f s390-linux32.c s390-linux64.c s390x-linux64.c
+	rm -f s390-linux32v1.c s390-linux32v2.c s390-linux64v1.c
+	rm -f s390-linux64v2.c s390x-linux64v1.c s390x-linux64v2.c
+	rm -f s390-te-linux32.c s390-te-linux64.c
 	rm -f tic6x-c64xp-linux.c tic6x-c64x-linux.c tic6x-c62x-linux.c
 	rm -f xml-builtin.c stamp-xml
 	rm -f i386-avx.c i386-avx-linux.c
@@ -417,54 +420,7 @@ stamp-xml: $(XML_DIR)/feature_to_c.sh Makefile $(XML_FILES)
 # will remove them.
 MAKEOVERRIDES=
 
-gdb_proc_service_h = $(srcdir)/gdb_proc_service.h
 regdat_sh = $(srcdir)/../regformats/regdat.sh
-regdef_h = $(srcdir)/../regformats/regdef.h
-regcache_h = $(srcdir)/regcache.h
-signals_def = $(srcdir)/../../include/gdb/signals.def
-signals_h = $(srcdir)/../../include/gdb/signals.h $(signals_def)
-ptid_h = $(srcdir)/../common/ptid.h
-ax_h = $(srcdir)/ax.h
-agent_h = $(srcdir)/../common/agent.h
-linux_btrace_h = $(srcdir)/../common/linux-btrace.h \
-		$(srcdir)/../common/btrace-common.h $(vec_h) $(ptid_h)
-linux_osdata_h = $(srcdir)/../common/linux-osdata.h
-vec_h = $(srcdir)/../common/vec.h
-gdb_vecs_h = $(srcdir)/../common/gdb_vecs.h
-host_defs_h = $(srcdir)/../common/host-defs.h
-libiberty_h = $(srcdir)/../../include/libiberty.h
-# Since everything must include server.h, we make that depend on
-# generated files.
-server_h = $(srcdir)/server.h $(regcache_h) $(srcdir)/target.h \
-		$(srcdir)/mem-break.h $(srcdir)/../common/gdb_signals.h \
-		$(srcdir)/../common/common-utils.h \
-		$(srcdir)/../common/xml-utils.h \
-		$(srcdir)/../common/buffer.h \
-		$(srcdir)/../common/gdb_assert.h \
-		$(srcdir)/../common/gdb_locale.h \
-		$(srcdir)/../target/resume.h \
-		$(srcdir)/../target/wait.h \
-		$(srcdir)/../target/waitstatus.h \
-		$(ptid_h) \
-		$(signals_h) \
-		$(libiberty_h) \
-		$(srcdir)/../../include/ansidecl.h \
-		$(generated_files)
-
-gdbthread_h = $(srcdir)/gdbthread.h $(target_h) $(srcdir)/server.h
-linux_low_h = $(srcdir)/linux-low.h $(gdbthread_h)
-
-linux_ptrace_h = $(srcdir)/../common/linux-ptrace.h
-
-gdb_thread_db_h = $(srcdir)/../common/gdb_thread_db.h
-
-linux_procfs_h = $(srcdir)/../common/linux-procfs.h
-
-lynx_low_h = $(srcdir)/lynx-low.h $(srcdir)/server.h
-
-nto_low_h = $(srcdir)/nto-low.h
-
-mips_linux_watch_h = $(srcdir)/../common/mips-linux-watch.h
 
 UST_CFLAGS = $(ustinc) -DCONFIG_UST_GDB_INTEGRATION
 
@@ -561,11 +517,13 @@ waitstatus.o: ../target/waitstatus.c
 	$(COMPILE) $<
 	$(POSTCOMPILE)
 
-linux-btrace.o: ../common/linux-btrace.c $(linux_btrace_h) $(server_h)
-	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $<
+linux-btrace.o: ../common/linux-btrace.c
+	$(COMPILE) $<
+	$(POSTCOMPILE)
 
-mips-linux-watch.o: ../common/mips-linux-watch.c $(mips_linux_watch_h) $(server_h)
-	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $<
+mips-linux-watch.o: ../common/mips-linux-watch.c
+	$(COMPILE) $<
+	$(POSTCOMPILE)
 
 # Native object files rules from ../nat
 
@@ -583,9 +541,6 @@ vasprintf.o: $(srcdir)/../../libiberty/vasprintf.c
 vsnprintf.o: $(srcdir)/../../libiberty/vsnprintf.c
 	$(COMPILE) $<
 	$(POSTCOMPILE)
-
-i386_low_h = $(srcdir)/i386-low.h
-win32_low_h = $(srcdir)/win32-low.h
 
 aarch64.c : $(srcdir)/../regformats/aarch64.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/aarch64.dat aarch64.c
@@ -679,12 +634,16 @@ s390-linux64v1.c : $(srcdir)/../regformats/s390-linux64v1.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/s390-linux64v1.dat s390-linux64v1.c
 s390-linux64v2.c : $(srcdir)/../regformats/s390-linux64v2.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/s390-linux64v2.dat s390-linux64v2.c
+s390-te-linux64.c : $(srcdir)/../regformats/s390-te-linux64.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/s390-te-linux64.dat s390-te-linux64.c
 s390x-linux64.c : $(srcdir)/../regformats/s390x-linux64.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/s390x-linux64.dat s390x-linux64.c
 s390x-linux64v1.c : $(srcdir)/../regformats/s390x-linux64v1.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/s390x-linux64v1.dat s390x-linux64v1.c
 s390x-linux64v2.c : $(srcdir)/../regformats/s390x-linux64v2.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/s390x-linux64v2.dat s390x-linux64v2.c
+s390x-te-linux64.c : $(srcdir)/../regformats/s390x-te-linux64.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/s390x-te-linux64.dat s390x-te-linux64.c
 
 tic6x-c64xp-linux.c : $(srcdir)/../regformats/tic6x-c64xp-linux.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/tic6x-c64xp-linux.dat tic6x-c64xp-linux.c

@@ -262,14 +262,7 @@ struct value *
 value_of_register (int regnum, struct frame_info *frame)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
-  CORE_ADDR addr;
-  int optim;
-  int unavail;
   struct value *reg_val;
-  struct type *reg_type;
-  int realnum;
-  gdb_byte raw_buffer[MAX_REGISTER_SIZE];
-  enum lval_type lval;
 
   /* User registers lie completely outside of the range of normal
      registers.  Catch them early so that the target never sees them.  */
@@ -277,28 +270,8 @@ value_of_register (int regnum, struct frame_info *frame)
 		+ gdbarch_num_pseudo_regs (gdbarch))
     return value_of_user_reg (regnum, frame);
 
-  frame_register (frame, regnum, &optim, &unavail,
-		  &lval, &addr, &realnum, raw_buffer);
-
-  reg_type = register_type (gdbarch, regnum);
-  if (optim)
-    reg_val = allocate_optimized_out_value (reg_type);
-  else
-    reg_val = allocate_value (reg_type);
-
-  if (!optim && !unavail)
-    memcpy (value_contents_raw (reg_val), raw_buffer,
-	    register_size (gdbarch, regnum));
-  else
-    memset (value_contents_raw (reg_val), 0,
-	    register_size (gdbarch, regnum));
-
-  VALUE_LVAL (reg_val) = lval;
-  set_value_address (reg_val, addr);
-  VALUE_REGNUM (reg_val) = regnum;
-  if (unavail)
-    mark_value_bytes_unavailable (reg_val, 0, register_size (gdbarch, regnum));
-  VALUE_FRAME_ID (reg_val) = get_frame_id (frame);
+  reg_val = value_of_register_lazy (frame, regnum);
+  value_fetch_lazy (reg_val);
   return reg_val;
 }
 
@@ -502,7 +475,6 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
       return v;
 
     case LOC_STATIC:
-      v = allocate_value_lazy (type);
       if (overlay_debugging)
 	addr = symbol_overlayed_address (SYMBOL_VALUE_ADDRESS (var),
 					 SYMBOL_OBJ_SECTION (SYMBOL_OBJFILE (var),
@@ -517,7 +489,6 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
 	error (_("Unknown argument list address for `%s'."),
 	       SYMBOL_PRINT_NAME (var));
       addr += SYMBOL_VALUE (var);
-      v = allocate_value_lazy (type);
       break;
 
     case LOC_REF_ARG:
@@ -532,14 +503,12 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
 	argref += SYMBOL_VALUE (var);
 	ref = value_at (lookup_pointer_type (type), argref);
 	addr = value_as_address (ref);
-	v = allocate_value_lazy (type);
 	break;
       }
 
     case LOC_LOCAL:
       addr = get_frame_locals_address (frame);
       addr += SYMBOL_VALUE (var);
-      v = allocate_value_lazy (type);
       break;
 
     case LOC_TYPEDEF:
@@ -548,7 +517,6 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
       break;
 
     case LOC_BLOCK:
-      v = allocate_value_lazy (type);
       if (overlay_debugging)
 	addr = symbol_overlayed_address
 	  (BLOCK_START (SYMBOL_BLOCK_VALUE (var)), SYMBOL_OBJ_SECTION (SYMBOL_OBJFILE (var),
@@ -575,7 +543,6 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
 	             SYMBOL_PRINT_NAME (var));
 
 	    addr = value_as_address (regval);
-	    v = allocate_value_lazy (type);
 	  }
 	else
 	  {
@@ -620,7 +587,6 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
 	if (obj_section
 	    && (obj_section->the_bfd_section->flags & SEC_THREAD_LOCAL) != 0)
 	  addr = target_translate_tls_address (obj_section->objfile, addr);
-	v = allocate_value_lazy (type);
       }
       break;
 
@@ -632,10 +598,9 @@ default_read_var_value (struct symbol *var, struct frame_info *frame)
 	     SYMBOL_PRINT_NAME (var));
       break;
     }
-  /* TODO(kbo): this might go into the value constructor.  */
-  resolve_value_type (v, addr);
-  VALUE_LVAL (v) = lval_memory;
-  set_value_address (v, addr);
+
+  v = value_at_lazy (type, addr);
+
   return v;
 }
 

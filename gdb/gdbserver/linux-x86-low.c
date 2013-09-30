@@ -31,6 +31,8 @@
 #include "gdb_proc_service.h"
 #include "agent.h"
 #include "tdesc.h"
+#include "tracepoint.h"
+#include "ax.h"
 
 #ifdef __x86_64__
 /* Defined in auto-generated file amd64-linux.c.  */

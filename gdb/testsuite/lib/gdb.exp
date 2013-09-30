@@ -3944,7 +3944,7 @@ gdb_caching_proc gdb_skip_xml_test {
 # Return "" if no build-id found.
 proc build_id_debug_filename_get { exec } {
     set tmp [standard_output_file "${exec}-tmp"]
-    set objcopy_program [transform objcopy]
+    set objcopy_program [gdb_find_objcopy]
 
     set result [catch "exec $objcopy_program -j .note.gnu.build-id -O binary $exec $tmp" output]
     verbose "result is $result"
@@ -3982,7 +3982,7 @@ proc gdb_gnu_strip_debug { dest args } {
     set debug_file "${dest}.debug"
 
     set strip_to_file_program [transform strip]
-    set objcopy_program [transform objcopy]
+    set objcopy_program [gdb_find_objcopy]
 
     set debug_link [file tail $debug_file]
     set stripped_file "${dest}.stripped"
@@ -4471,6 +4471,16 @@ proc run_on_host { test program args } {
 	fail $test
 	return -1
     }
+}
+
+# Return non-zero if "board_info debug_flags" mentions Fission.
+# http://gcc.gnu.org/wiki/DebugFission
+# Fission doesn't support everything yet.
+# This supports working around bug 15954.
+
+proc using_fission { } {
+    set debug_flags [board_info [target_info name] debug_flags]
+    return [regexp -- "-gsplit-dwarf" $debug_flags]
 }
 
 # Always load compatibility stuff.

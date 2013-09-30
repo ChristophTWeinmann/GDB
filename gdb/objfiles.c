@@ -63,8 +63,6 @@ DEFINE_REGISTRY (objfile, REGISTRY_ACCESS_FIELD)
 /* Externally visible variables that are owned by this module.
    See declarations in objfile.h for more info.  */
 
-struct objfile *rt_common_objfile;	/* For runtime common symbols */
-
 struct objfile_pspace_info
 {
   struct obj_section **sections;
@@ -250,6 +248,11 @@ build_objfile_section_table (struct objfile *objfile)
    into the list of all known objfiles, and return a pointer to the
    new objfile struct.
 
+   NAME should contain original non-canonicalized filename or other
+   identifier as entered by user.  If there is no better source use
+   bfd_get_filename (ABFD).  NAME may be NULL only if ABFD is NULL.
+   NAME content is copied into returned objfile.
+
    The FLAGS word contains various bits (OBJF_*) that can be taken as
    requests for specific operations.  Other bits like OBJF_SHARED are
    simply copied through to the new objfile flags member.  */
@@ -264,7 +267,7 @@ build_objfile_section_table (struct objfile *objfile)
    things in a consistent state even if abfd is NULL.  */
 
 struct objfile *
-allocate_objfile (bfd *abfd, int flags)
+allocate_objfile (bfd *abfd, const char *name, int flags)
 {
   struct objfile *objfile;
 
@@ -277,6 +280,14 @@ allocate_objfile (bfd *abfd, int flags)
 
   objfile_alloc_data (objfile);
 
+  if (name == NULL)
+    {
+      gdb_assert (abfd == NULL);
+      name = "<<anonymous objfile>>";
+    }
+  objfile->original_name = obstack_copy0 (&objfile->objfile_obstack, name,
+					  strlen (name));
+
   /* Update the per-objfile information that comes from the bfd, ensuring
      that any data that is reference is saved in the per-objfile data
      region.  */
@@ -285,15 +296,10 @@ allocate_objfile (bfd *abfd, int flags)
   gdb_bfd_ref (abfd);
   if (abfd != NULL)
     {
-      objfile->name = bfd_get_filename (abfd);
       objfile->mtime = bfd_get_mtime (abfd);
 
       /* Build section table.  */
       build_objfile_section_table (objfile);
-    }
-  else
-    {
-      objfile->name = "<<anonymous objfile>>";
     }
 
   objfile->per_bfd = get_objfile_bfd_data (objfile, abfd);
@@ -612,9 +618,6 @@ free_objfile (struct objfile *objfile)
   if (objfile == symfile_objfile)
     symfile_objfile = NULL;
 
-  if (objfile == rt_common_objfile)
-    rt_common_objfile = NULL;
-
   /* Before the symbol table code was redone to make it easier to
      selectively load and remove information particular to a specific
      linkage unit, gdb used to do these things whenever the monolithic
@@ -642,8 +645,6 @@ free_objfile (struct objfile *objfile)
       clear_current_source_symtab_and_line ();
   }
 
-  /* The last thing we do is free the objfile struct itself.  */
-
   if (objfile->global_psymbols.list)
     xfree (objfile->global_psymbols.list);
   if (objfile->static_psymbols.list)
@@ -657,6 +658,7 @@ free_objfile (struct objfile *objfile)
   /* Rebuild section map next time we need it.  */
   get_objfile_pspace_data (objfile->pspace)->section_map_dirty = 1;
 
+  /* The last thing we do is free the objfile struct itself.  */
   xfree (objfile);
 }
 
@@ -1272,10 +1274,10 @@ filter_overlapping_sections (struct obj_section **map, int map_size)
 			   " (A) section `%s' from `%s' [%s, %s)\n"
 			   " (B) section `%s' from `%s' [%s, %s).\n"
 			   "Will ignore section B"),
-			 bfd_section_name (abfd1, bfds1), objf1->name,
+			 bfd_section_name (abfd1, bfds1), objfile_name (objf1),
 			 paddress (gdbarch, sect1_addr),
 			 paddress (gdbarch, sect1_endaddr),
-			 bfd_section_name (abfd2, bfds2), objf2->name,
+			 bfd_section_name (abfd2, bfds2), objfile_name (objf2),
 			 paddress (gdbarch, sect2_addr),
 			 paddress (gdbarch, sect2_endaddr));
 	    }
@@ -1484,6 +1486,17 @@ default_iterate_over_objfiles_in_search_order
        if (stop)
 	 return;
     }
+}
+
+/* Return canonical name for OBJFILE.  */
+
+const char *
+objfile_name (const struct objfile *objfile)
+{
+  if (objfile->obfd != NULL)
+    return bfd_get_filename (objfile->obfd);
+
+  return objfile->original_name;
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */

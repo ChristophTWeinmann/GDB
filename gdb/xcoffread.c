@@ -94,7 +94,7 @@ struct coff_symbol
     char *c_name;
     int c_symnum;		/* Symbol number of this entry.  */
     int c_naux;			/* 0 if syment only, 1 if syment + auxent.  */
-    long c_value;
+    CORE_ADDR c_value;
     unsigned char c_sclass;
     int c_secnum;
     unsigned int c_type;
@@ -817,7 +817,7 @@ return_after_cleanup:
 }
 
 static void
-aix_process_linenos (void)
+aix_process_linenos (struct objfile *objfile)
 {
   /* There is no linenos to read if there are only dwarf info.  */
   if (this_symtab_psymtab == NULL)
@@ -1033,7 +1033,7 @@ read_xcoff_symtab (struct objfile *objfile, struct partial_symtab *pst)
   unsigned int max_symnum;
   int just_started = 1;
   int depth = 0;
-  int fcn_start_addr = 0;
+  CORE_ADDR fcn_start_addr = 0;
 
   struct coff_symbol fcn_stab_saved = { 0 };
 
@@ -2958,12 +2958,12 @@ xcoff_initial_scan (struct objfile *objfile, int symfile_flags)
   file_ptr symtab_offset;	/* symbol table and */
   file_ptr stringtab_offset;	/* string table file offsets */
   struct coff_symfile_info *info;
-  char *name;
+  const char *name;
   unsigned int size;
 
   info = XCOFF_DATA (objfile);
   symfile_bfd = abfd = objfile->obfd;
-  name = objfile->name;
+  name = objfile_name (objfile);
 
   num_symbols = bfd_get_symcount (abfd);	/* # of symbols */
   symtab_offset = obj_sym_filepos (abfd);	/* symbol table file offset */
@@ -3104,8 +3104,6 @@ static const struct sym_fns xcoff_sym_fns =
      xcoffread.c reads all the symbols and does in fact randomly access them
      (in C_BSTAT and line number processing).  */
 
-  bfd_target_xcoff_flavour,
-
   xcoff_new_init,		/* init anything gbl to entire symtab */
   xcoff_symfile_init,		/* read initial info, setup for sym_read() */
   xcoff_initial_scan,		/* read a symbol file into symtab */
@@ -3194,7 +3192,7 @@ extern initialize_file_ftype _initialize_xcoffread;
 void
 _initialize_xcoffread (void)
 {
-  add_symtab_fns (&xcoff_sym_fns);
+  add_symtab_fns (bfd_target_xcoff_flavour, &xcoff_sym_fns);
 
   xcoff_objfile_data_key = register_objfile_data_with_cleanup (NULL,
 							       xcoff_free_info);

@@ -1200,7 +1200,7 @@ find_separate_debug_file_by_buildid (struct objfile *objfile)
       build_id_name = build_id_to_debug_filename (build_id);
       /* Prevent looping on a stripped .debug file.  */
       if (build_id_name != NULL
-	  && filename_cmp (build_id_name, objfile->name) == 0)
+	  && filename_cmp (build_id_name, objfile_name (objfile)) == 0)
         {
 	  warning (_("\"%s\": separate debug info file has no debug info"),
 		   build_id_name);
@@ -1255,7 +1255,7 @@ elf_symfile_read (struct objfile *objfile, int symfile_flags)
     {
       fprintf_unfiltered (gdb_stdlog,
 			  "Reading minimal symbols of objfile %s ...\n",
-			  objfile->name);
+			  objfile_name (objfile));
     }
 
   init_minimal_symbol_collection ();
@@ -1419,14 +1419,14 @@ elf_symfile_read (struct objfile *objfile, int symfile_flags)
 
       if (!objfile_has_partial_symbols (objfile)
 	  && dwarf2_initialize_objfile (objfile))
-	objfile->sf = &elf_sym_fns_gdb_index;
+	objfile_set_sym_fns (objfile, &elf_sym_fns_gdb_index);
       else
 	{
 	  /* It is ok to do this even if the stabs reader made some
 	     partial symbols, because OBJF_PSYMTABS_READ has not been
 	     set, and so our lazy reader function will still be called
 	     when needed.  */
-	  objfile->sf = &elf_sym_fns_lazy_psyms;
+	  objfile_set_sym_fns (objfile, &elf_sym_fns_lazy_psyms);
 	}
     }
   /* If the file has its own symbol tables it has no separate debug
@@ -1458,7 +1458,7 @@ elf_symfile_read (struct objfile *objfile, int symfile_flags)
 	  bfd *abfd = symfile_bfd_open (debugfile);
 
 	  make_cleanup_bfd_unref (abfd);
-	  symbol_file_add_separate (abfd, symfile_flags, objfile);
+	  symbol_file_add_separate (abfd, debugfile, symfile_flags, objfile);
 	  do_cleanups (cleanup);
 	}
     }
@@ -1721,7 +1721,6 @@ static const struct sym_probe_fns elf_probe_fns =
 
 static const struct sym_fns elf_sym_fns =
 {
-  bfd_target_elf_flavour,
   elf_new_init,			/* init anything gbl to entire symtab */
   elf_symfile_init,		/* read initial info, setup for sym_read() */
   elf_symfile_read,		/* read a symbol file into symtab */
@@ -1740,7 +1739,6 @@ static const struct sym_fns elf_sym_fns =
 
 static const struct sym_fns elf_sym_fns_lazy_psyms =
 {
-  bfd_target_elf_flavour,
   elf_new_init,			/* init anything gbl to entire symtab */
   elf_symfile_init,		/* read initial info, setup for sym_read() */
   elf_symfile_read,		/* read a symbol file into symtab */
@@ -1758,7 +1756,6 @@ static const struct sym_fns elf_sym_fns_lazy_psyms =
    DWARF-specific GNU index rather than psymtab.  */
 static const struct sym_fns elf_sym_fns_gdb_index =
 {
-  bfd_target_elf_flavour,
   elf_new_init,			/* init anything gbl to entire symab */
   elf_symfile_init,		/* read initial info, setup for sym_red() */
   elf_symfile_read,		/* read a symbol file into symtab */
@@ -1786,7 +1783,7 @@ void
 _initialize_elfread (void)
 {
   probe_key = register_objfile_data_with_cleanup (NULL, probe_key_free);
-  add_symtab_fns (&elf_sym_fns);
+  add_symtab_fns (bfd_target_elf_flavour, &elf_sym_fns);
 
   elf_objfile_gnu_ifunc_cache_data = register_objfile_data ();
   gnu_ifunc_fns_p = &elf_gnu_ifunc_fns;

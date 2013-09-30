@@ -553,7 +553,7 @@ dbx_symfile_read (struct objfile *objfile, int symfile_flags)
 
   val = bfd_seek (sym_bfd, DBX_SYMTAB_OFFSET (objfile), SEEK_SET);
   if (val < 0)
-    perror_with_name (objfile->name);
+    perror_with_name (objfile_name (objfile));
 
   /* Size the symbol table.  */
   if (objfile->global_psymbols.size == 0 && objfile->static_psymbols.size == 0)
@@ -3564,7 +3564,6 @@ stabsect_build_psymtabs (struct objfile *objfile, char *stab_name,
 
 static const struct sym_fns aout_sym_fns =
 {
-  bfd_target_aout_flavour,
   dbx_new_init,			/* init anything gbl to entire symtab */
   dbx_symfile_init,		/* read initial info, setup for sym_read() */
   dbx_symfile_read,		/* read a symbol file into symtab */
@@ -3581,7 +3580,7 @@ static const struct sym_fns aout_sym_fns =
 void
 _initialize_dbxread (void)
 {
-  add_symtab_fns (&aout_sym_fns);
+  add_symtab_fns (bfd_target_aout_flavour, &aout_sym_fns);
 
   dbx_objfile_data_key
     = register_objfile_data_with_cleanup (NULL, dbx_free_symfile_info);
