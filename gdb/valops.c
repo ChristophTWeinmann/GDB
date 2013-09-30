@@ -1566,6 +1566,9 @@ value_ind (struct value *arg1)
 			      (value_as_address (arg1)
 			       - value_pointed_to_offset (arg1)));
 
+      /* Re-fetch type as it might changed during value construction.  */
+      enc_type = value_type (arg2);
+
       return readjust_indirect_value_type (arg2, enc_type, base_type, arg1);
     }
 
