@@ -1568,10 +1568,8 @@ is_dynamic_type (const struct type *type)
 
   if (TYPE_CODE (type) == TYPE_CODE_RANGE)
     {
-      if (TYPE_LOW_BOUND_BLOCK (type)
-	  || TYPE_HIGH_BOUND_BLOCK (type)
-	  || TYPE_LOW_BOUND_LOCLIST (type)
-	  || TYPE_HIGH_BOUND_LOCLIST (type))
+      if (TYPE_HIGH_BOUND_KIND (type) != DWARF_CONST
+	  || TYPE_LOW_BOUND_KIND (type) != DWARF_CONST)
 	return 1;
     }
 
