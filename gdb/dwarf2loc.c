@@ -2476,10 +2476,10 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 
 int dwarf2_address_data_valid (const struct type *type)
 {
-  if (!TYPE_ASSOCIATED_PROP (type) && TYPE_NOT_ASSOCIATED (type))
+  if (TYPE_NOT_ASSOCIATED (type))
     return 0;
 
-  if (!TYPE_ALLOCATED_PROP (type) && TYPE_NOT_ALLOCATED (type))
+  if (TYPE_NOT_ALLOCATED (type))
     return 0;
 
   return 1;

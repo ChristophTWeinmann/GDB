@@ -57,12 +57,12 @@ f_print_type (struct type *type, const char *varstring, struct ui_file *stream,
   enum type_code code;
   int demangled_args;
 
-  if (!TYPE_ASSOCIATED_PROP (type) && TYPE_NOT_ASSOCIATED (type))
+  if (TYPE_NOT_ASSOCIATED (type))
     {
       val_print_not_associated (stream);
       return;
     }
-  if (!TYPE_ALLOCATED_PROP (type) && TYPE_NOT_ALLOCATED (type))
+  if (TYPE_NOT_ALLOCATED (type))
     {
       val_print_not_allocated (stream);
       return;
@@ -182,9 +182,9 @@ f_type_print_varspec_suffix (struct type *type, struct ui_file *stream,
       if (arrayprint_recurse_level == 1)
 	fprintf_filtered (stream, "(");
 
-      if (!TYPE_ALLOCATED_PROP (type) && TYPE_NOT_ALLOCATED (type))
+      if (TYPE_NOT_ASSOCIATED (type))
         val_print_not_allocated (stream);
-      else if (!TYPE_ASSOCIATED_PROP (type) && TYPE_NOT_ASSOCIATED (type))
+      else if (TYPE_NOT_ALLOCATED (type))
         val_print_not_associated (stream);
       else
         {

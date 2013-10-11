@@ -1661,15 +1661,15 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
   prop = TYPE_ALLOCATED_PROP (type);
   if (resolve_dynamic_prop (prop, address, &value))
     {
-      TYPE_NOT_ALLOCATED (resolved_type) = value == 0;
-      TYPE_ALLOCATED_PROP (resolved_type) = NULL;
+      TYPE_ALLOCATED_PROP (resolved_type)->kind = DWARF_CONST;
+      TYPE_ALLOCATED_PROP (resolved_type)->data.const_val = value;
     }
 
   prop = TYPE_ASSOCIATED_PROP (type);
   if (resolve_dynamic_prop (prop, address, &value))
     {
-      TYPE_NOT_ASSOCIATED (resolved_type) = value == 0;
-      TYPE_ASSOCIATED_PROP (resolved_type) = NULL;
+      TYPE_ASSOCIATED_PROP (resolved_type)->kind = DWARF_CONST;
+      TYPE_ASSOCIATED_PROP (resolved_type)->data.const_val = value;
     }
 
   baton = TYPE_DATA_LOCATION_BATON (type);
@@ -1687,8 +1687,7 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
 
       do {
 	struct type *range_type = TYPE_INDEX_TYPE (target_type);
-	if (!TYPE_ALLOCATED_PROP (resolved_type)
-	    && TYPE_NOT_ALLOCATED (resolved_type))
+  if (TYPE_NOT_ALLOCATED (resolved_type))
 	  {
 	    TYPE_LOW_BOUND (range_type) = 0;
 	    TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
@@ -1722,8 +1721,7 @@ resolve_dynamic_values_1 (struct type *type, CORE_ADDR address, int copy)
     {
       struct type *range_type = TYPE_INDEX_TYPE (resolved_type);
 
-      if (!TYPE_ALLOCATED_PROP (resolved_type)
-	  && TYPE_NOT_ALLOCATED (resolved_type))
+  if (TYPE_NOT_ALLOCATED (resolved_type))
      	{
 	  TYPE_LOW_BOUND (range_type) = 0;
 	  TYPE_LOW_BOUND_KIND (range_type) = DWARF_CONST;
@@ -3726,10 +3724,18 @@ recursive_dump_type (struct type *type, int spaces)
 	break;
     }
 
-  if (TYPE_ALLOCATED_PROP (type))
-    printfi_filtered (spaces, "allocated %d\n", !TYPE_NOT_ALLOCATED (type));
-  if (TYPE_ASSOCIATED_PROP (type))
-    printfi_filtered (spaces, "associated %d\n", !TYPE_NOT_ASSOCIATED (type));
+  if (TYPE_CODE (type) == TYPE_CODE_ARRAY
+          || TYPE_CODE (type) == TYPE_CODE_STRING)
+    {
+      printfi_filtered (spaces, "allocated %d\n",
+            TYPE_ALLOCATED_PROP (type)
+            && TYPE_ALLOCATED_PROP (type)->kind == DWARF_CONST
+            && TYPE_ALLOCATED_PROP (type)->data.const_val);
+      printfi_filtered (spaces, "associated %d\n",
+            TYPE_ASSOCIATED_PROP (type)
+            && TYPE_ASSOCIATED_PROP (type)->kind == DWARF_CONST
+            && TYPE_ASSOCIATED_PROP (type)->data.const_val);
+    }
 
   if (spaces == 0)
     obstack_free (&dont_print_type_obstack, NULL);
@@ -3871,6 +3877,23 @@ copy_type_recursive_1 (struct objfile *objfile,
     {
       TYPE_RANGE_DATA (new_type) = xmalloc (sizeof (struct range_bounds));
       *TYPE_RANGE_DATA (new_type) = *TYPE_RANGE_DATA (type);
+    }
+
+  if (TYPE_CODE (type) == TYPE_CODE_ARRAY
+          || TYPE_CODE (type) == TYPE_CODE_STRING)
+    {
+      if (TYPE_ALLOCATED_PROP (type))
+        {
+          TYPE_ALLOCATED_PROP (new_type) =
+                  xmalloc (sizeof (struct dwarf2_prop));
+          *TYPE_ALLOCATED_PROP (new_type) = *TYPE_ALLOCATED_PROP (type);
+        }
+      if (TYPE_ASSOCIATED_PROP (type))
+        {
+          TYPE_ASSOCIATED_PROP (new_type) =
+                  xmalloc (sizeof (struct dwarf2_prop));
+          *TYPE_ASSOCIATED_PROP (new_type) = *TYPE_ASSOCIATED_PROP (type);
+        }
     }
 
   /* Copy pointers to other types.  */

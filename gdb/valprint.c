@@ -307,13 +307,13 @@ valprint_check_validity (struct ui_file *stream,
 {
   CHECK_TYPEDEF (type);
 
-  if (!TYPE_ASSOCIATED_PROP (type) && TYPE_NOT_ASSOCIATED (type))
+  if (TYPE_NOT_ASSOCIATED (type))
     {
       val_print_not_associated (stream);
       return 0;
     }
 
-  if (!TYPE_ALLOCATED_PROP (type) && TYPE_NOT_ALLOCATED (type))
+  if (TYPE_NOT_ALLOCATED (type))
     {
       val_print_not_allocated (stream);
       return 0;
@@ -844,13 +844,13 @@ value_check_printable (struct value *val, struct ui_file *stream,
       return 0;
     }
 
-  if (!TYPE_ASSOCIATED_PROP (type) && TYPE_NOT_ASSOCIATED (type))
+  if (TYPE_NOT_ASSOCIATED (type))
     {
       val_print_not_associated (stream);
       return 0;
     }
 
-  if (!TYPE_ALLOCATED_PROP (type) && TYPE_NOT_ALLOCATED (type))
+  if (TYPE_NOT_ALLOCATED (type))
     {
       val_print_not_allocated (stream);
       return 0;
